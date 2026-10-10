@@ -195,3 +195,20 @@ describe("enrichReview", () => {
     ).rejects.toThrow(/unparseable/);
   });
 });
+
+describe("filterByEvidence", () => {
+  it("drops a tag whose quote is not in the review", async () => {
+    const { filterByEvidence } = await import("../lib/enrich.js");
+    const review = { title: null, likedText: "Great location.", dislikedText: "Dirty  bathroom!" };
+    const { kept, dropped } = filterByEvidence(
+      [
+        { topic: "location", evidence: "great location" },
+        { topic: "cleanliness", evidence: "dirty bathroom" },
+        { topic: "noise", evidence: "loud street noise all night" },
+      ],
+      review,
+    );
+    expect(kept.map((t) => t.topic)).toEqual(["location", "cleanliness"]);
+    expect(dropped).toBe(1);
+  });
+});
