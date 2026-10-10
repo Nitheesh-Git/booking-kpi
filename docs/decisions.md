@@ -55,3 +55,11 @@ The fallback returned a usable nested response with 75 reviews even though its i
 **Why:** Real data showed three properties with 100 reviews over years and only three adjacent scores. The dashboard computed perfectly reasonable-looking averages from them. Non-technical staff cannot spot that; the app has to say it.
 
 **Trade-off:** A quiet property can trip the staleness check. The message says "either the property had none, or collection is not fetching new ones" rather than blaming collection.
+
+## 2026-10-10: No LLM-based scraping fallback
+
+**Considered:** Use the spare AI keys to read Booking.com pages directly when the Apify actor fails.
+
+**Rejected because:** Fetching, not parsing, is the hard part. Booking.com blocks automated requests from cloud servers and loads reviews with JavaScript, which Vercel functions cannot run; an LLM does not solve either. A review page is 100 to 500 KB of HTML, tens of thousands of tokens, so it would exhaust key limits quickly. A model reading HTML can misread or invent scores and dates, which works against the reliability the task values most. It would also reverse the "no own scraping" decision and add terms-of-service risk.
+
+**Instead:** Configure two Apify actors from different vendors as primary and fallback (`APIFY_ACTOR_ID`, comma-separated), keep the CSV and JSON importer as the manual fallback, and make AI key failover cover every failure type, not only rate limits.

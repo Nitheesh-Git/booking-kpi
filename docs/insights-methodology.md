@@ -18,7 +18,8 @@ Fixed list, defined in `dashboard.config.js`: cleanliness, check-in, staff and r
 - **Validation** (VERIFIED by unit tests): unparseable output or a schema mismatch fails the review, which stays retryable; unknown topics, polarities or severities are dropped.
 - **Evidence check** (VERIFIED by unit test, added 2026-10-10): the quote must appear in the review text, ignoring case, spacing and punctuation. Tags that fail are discarded. Tags stored before this check was added were not re-checked. To apply it to everything, set `review_enrichment.status` back to `pending` for analysed reviews and run `npm run enrich` (there is no `--reclassify` flag yet).
 - **Prompt version**: a hash of the prompt template is stored with each result, so a prompt change is visible in the data.
-- **Providers**: Groq with key rotation on rate limits, then OpenRouter. If every provider fails, reviews stay `pending` and are retried later; ingest never waits on AI.
+- **Providers**: Groq keys in rotation, then OpenRouter keys. Any failure on a key (rate limit, server error, timeout, revoked key) moves to the next key, then the next provider. If every key fails, reviews stay `pending` without using up an attempt and are retried later; ingest never waits on AI.
+- **Measured load (2026-10-10)**: 348 reviews tagged on Groq in about 70 minutes, peak 25 per minute, zero failed reviews, OpenRouter never needed. Daily load is about 10 to 30 calls, far inside one free key's limits. Extra keys from the same provider account usually share one limit, so they add redundancy rather than capacity.
 - Reviews with no text are marked `skipped` and count towards ratings only.
 
 ## Metrics
