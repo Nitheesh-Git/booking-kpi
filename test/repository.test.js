@@ -71,3 +71,16 @@ describe("data sources", () => {
     }
   });
 });
+
+describe("createSource", () => {
+  it("finds the sample from any working directory", async () => {
+    const { createSource } = await import("../lib/repository.js");
+    const original = process.cwd();
+    process.chdir("/");
+    try {
+      expect(createSource({})?.kind).toBe("sample");
+    } finally {
+      process.chdir(original);
+    }
+  });
+});
