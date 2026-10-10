@@ -33,6 +33,10 @@ describe("shouldContinue", () => {
     ).toEqual({ next: true, idle: 0 });
   });
 
+  it("hands on when the cron's collection used the whole time budget", () => {
+    expect(shouldContinue({ done: 0, stoppedEarly: true, outOfTime: true }, 0)).toEqual({ next: true, idle: 1 });
+  });
+
   it("stops when no progress for any other reason, so failing keys cannot loop", () => {
     expect(shouldContinue({ done: 0, stoppedEarly: true }, 2).next).toBe(false);
   });
