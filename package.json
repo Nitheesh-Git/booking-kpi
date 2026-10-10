@@ -21,7 +21,8 @@
     "inspect": "node scripts/inspect-raw.js",
     "eval": "node scripts/eval.js",
     "scan": "node scripts/scan.js",
-    "snapshot": "node scripts/snapshot.js"
+    "snapshot": "node scripts/snapshot.js",
+    "label-template": "node scripts/label-template.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

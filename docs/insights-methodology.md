@@ -41,7 +41,13 @@ All of this is computed in `lib/analytics.js` as pure functions, covered by `tes
 
 ## Evaluation
 
-**UNTESTED.** Precision and recall have not been measured. The plan calls for about 100 hand-labelled reviews in `data/eval/golden.json` and a comparison of the AI against a keyword baseline. This needs a human to label the reviews and has not been done. `npm run eval` currently prints recent tagged reviews side by side with their ratings for manual spot checks only.
+**UNTESTED: labels pending.** The tooling is ready; the labelling has to be done by a person.
+
+1. `npm run label-template` picks 100 real reviews with text, spread across properties and rating bands, and writes `data/eval/golden.todo.json`. The AI's tags are left out of the file so they cannot bias the labeller.
+2. A person adds every topic each review praises or complains about, fills in `labelledBy`, and saves the file as `data/eval/golden.json`.
+3. `npm run eval` prints precision and recall per topic and polarity for the AI and for a keyword baseline (`lib/baseline.js`), then the AI's failure cases.
+
+Paste the output here. If the AI does not clearly beat the keyword baseline, the simpler method should be used.
 
 ## Known limits
 

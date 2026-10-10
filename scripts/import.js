@@ -4,10 +4,14 @@ import { loadEnvironment } from "../lib/env.js";
 import { readImportFile } from "../lib/import.js";
 import { ingestPreparedReviews, prepareReviews } from "../lib/ingest.js";
 
-const [filePath, propertyFlag, propertyId] = process.argv.slice(2);
-if (!filePath || propertyFlag !== "--property" || !propertyId) {
+const args = process.argv.slice(2);
+const filePath = args[0];
+const flag = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : null);
+const propertyId = flag("--property");
+const ratingScale = Number(flag("--scale") ?? 10);
+if (!filePath || !propertyId || ![5, 10].includes(ratingScale)) {
   throw new Error(
-    "Usage: npm run import -- <file.csv|file.json> --property <slug>",
+    "Usage: npm run import -- <file.csv|file.json> --property <slug> [--scale 10|5]",
   );
 }
 
@@ -20,7 +24,7 @@ const { data: run, error: runError } = await database
 if (runError) throw runError;
 try {
   const items = readImportFile(filePath);
-  const prepared = prepareReviews(items, propertyId);
+  const prepared = prepareReviews(items, propertyId, new Date(), { ratingScale });
   const counts = await ingestPreparedReviews(database, run.id, prepared);
   if (prepared.rejected.length) {
     const { error } = await database

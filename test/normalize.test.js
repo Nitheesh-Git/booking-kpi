@@ -11,6 +11,16 @@ const fixture = JSON.parse(
 const now = new Date("2026-10-10T00:00:00.000Z");
 
 describe("normalizeReview", () => {
+  it("never doubles a low ten point score", () => {
+    const review = normalizeReview(
+      { rating: 4, datetime: "2026-10-01T00:00:00.000Z" },
+      "olympic-paddington",
+    );
+    expect(review.rating10).toBe(4);
+    expect(review.ratingScale).toBe(10);
+    expect(review.ratingPrecision).toBe("exact");
+  });
+
   it("uses an allowlist and derives Booking selected review ids", () => {
     const review = normalizeReview(
       { ...fixture[0], reviewer: "Never retain me" },
@@ -22,11 +32,12 @@ describe("normalizeReview", () => {
     expect(validateReview(review, now).ok).toBe(true);
   });
 
-  it("converts five point scores to rounded ten point scores", () => {
+  it("converts five point scores only when the source says so", () => {
     const review = normalizeReview(
       { rating: 4, datetime: "2026-10-01T00:00:00.000Z" },
       "potts-point",
       now,
+      { ratingScale: 5 },
     );
     expect(review.rating10).toBe(8);
     expect(review.ratingPrecision).toBe("rounded");
@@ -63,5 +74,24 @@ describe("normalizeReview", () => {
     expect(second.accepted.map((review) => review.dedupeKey)).toEqual(
       first.accepted.map((review) => review.dedupeKey),
     );
+  });
+});
+
+describe("collection recency check", () => {
+  it("flags a run whose newest review is weeks old", async () => {
+    const { recencyProblem } = await import("../lib/collect.js");
+    const now = new Date("2026-10-10T00:00:00Z");
+    expect(recencyProblem([{ reviewDate: "2026-10-08T00:00:00Z" }], now)).toBeNull();
+    expect(recencyProblem([{ reviewDate: "2026-07-26T00:00:00Z" }, { reviewDate: "2024-01-01T00:00:00Z" }], now)).toMatch(/76 days old/);
+  });
+
+  it("merges actor input overrides and a larger backfill cap", async () => {
+    const { actorInput } = await import("../lib/apify.js");
+    const input = actorInput({ bookingUrl: "https://example.test/h.html" }, false, {
+      APIFY_MAX_REVIEWS: "400",
+      APIFY_INPUT_OVERRIDES: '{"sortBy":"newest"}',
+    });
+    expect(input).toMatchObject({ maxReviews: 400, sortBy: "newest", startUrls: ["https://example.test/h.html"] });
+    expect(actorInput({ bookingUrl: "x" }, false, { APIFY_INPUT_OVERRIDES: "not json" }).maxReviews).toBe(100);
   });
 });

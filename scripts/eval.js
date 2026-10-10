@@ -1,87 +1,53 @@
 /**
- * eval — Evaluate enrichment quality on a sample of reviews.
+ * eval: measure AI topic tags and the keyword baseline against hand labels.
  *
- * Prints a table of the most-recent 20 enriched reviews with their
- * LLM sentiment, detected topics, and the raw rating for comparison.
+ * Needs data/eval/golden.json (see `npm run label-template`). Prints
+ * precision and recall per topic and polarity, then the failure cases.
  *
- * Usage:
- *   npm run eval
- *   npm run eval -- --property olympic-paddington
- *   npm run eval -- --limit 50
+ * Usage: npm run eval [-- --failures 20]
  */
 
-import { createDatabaseClient } from "../lib/db.js";
+import { existsSync, readFileSync } from "node:fs";
+import { keywordTags } from "../lib/baseline.js";
 import { loadEnvironment } from "../lib/env.js";
-import { properties } from "../dashboard.config.js";
+import { scoreTags } from "../lib/evaluate.js";
+import { createSource } from "../lib/repository.js";
 
-const args = process.argv.slice(2);
-const propertyFlag = args.indexOf("--property");
-const limitFlag = args.indexOf("--limit");
-
-const propertyId = propertyFlag >= 0 ? args[propertyFlag + 1] : null;
-const limit = limitFlag >= 0 ? Number(args[limitFlag + 1]) : 20;
-
-const db = createDatabaseClient(loadEnvironment());
-
-let reviewQuery = db
-  .from("reviews")
-  .select(
-    `id, property_id, rating_10, review_date, title, liked_text, disliked_text,
-     review_enrichment!inner ( sentiment_score, provider, model, status ),
-     review_topics ( topic, polarity, severity )`,
-  )
-  .eq("review_enrichment.status", "done")
-  .order("review_date", { ascending: false })
-  .limit(limit);
-
-if (propertyId) reviewQuery = reviewQuery.eq("property_id", propertyId);
-
-const { data, error } = await reviewQuery;
-if (error) throw error;
-
-const rows = data ?? [];
-
-const label = propertyId
-  ? properties.find((p) => p.id === propertyId)?.name ?? propertyId
-  : "ALL PROPERTIES";
-
-console.log(`\n── Enrichment Eval: ${label} (${rows.length} reviews) ──\n`);
-
-for (const row of rows) {
-  const enrich = Array.isArray(row.review_enrichment)
-    ? row.review_enrichment[0]
-    : row.review_enrichment;
-  const topicList = (row.review_topics ?? [])
-    .map((t) => `${t.polarity === "negative" ? "–" : "+"}${t.topic}`)
-    .join(", ");
-
-  const sentStr =
-    enrich?.sentiment_score != null
-      ? Number(enrich.sentiment_score).toFixed(2)
-      : "–";
-
-  console.log(
-    `[${row.review_date?.slice(0, 10)}]  ` +
-      `rating:${Number(row.rating_10).toFixed(1)}  ` +
-      `sentiment:${sentStr}  ` +
-      `${topicList || "(no topics)"}`,
-  );
-  if (row.title) console.log(`  Title   : ${row.title}`);
-  if (row.liked_text) console.log(`  Liked   : ${row.liked_text.slice(0, 120)}`);
-  if (row.disliked_text) console.log(`  Disliked: ${row.disliked_text.slice(0, 120)}`);
-  console.log();
+const GOLDEN = "data/eval/golden.json";
+if (!existsSync(GOLDEN)) {
+  console.error(`${GOLDEN} not found. Run npm run label-template, label the reviews by hand, and save as ${GOLDEN}.`);
+  process.exit(1);
 }
+const golden = JSON.parse(readFileSync(GOLDEN, "utf8"));
+if (!golden.labelledBy) console.warn("Warning: golden.json has no labelledBy; record who labelled it.");
 
-console.log(`Provider distribution:`);
-const providerCounts = {};
-for (const row of rows) {
-  const provider =
-    (Array.isArray(row.review_enrichment)
-      ? row.review_enrichment[0]
-      : row.review_enrichment)?.provider ?? "unknown";
-  providerCounts[provider] = (providerCounts[provider] ?? 0) + 1;
+const source = createSource(loadEnvironment());
+if (!source) throw new Error("No data source. Configure Supabase or add data/sample/reviews.json.");
+const byId = new Map(
+  (await source.loadReviews({ fromUtc: "2000-01-01T00:00:00Z", toUtc: "2100-01-01T00:00:00Z" })).map((r) => [r.id, r]),
+);
+
+const labelled = golden.reviews.filter((g) => byId.has(g.id));
+const missing = golden.reviews.length - labelled.length;
+const ai = scoreTags(labelled.map((g) => ({ id: g.id, expected: g.labels, predicted: byId.get(g.id).topics })));
+const kw = scoreTags(labelled.map((g) => ({ id: g.id, expected: g.labels, predicted: keywordTags(g) })));
+
+const pct = (v) => (v == null ? "  n/a" : `${Math.round(v * 100)}%`.padStart(5));
+console.log(`\nEvaluated ${labelled.length} hand-labelled reviews${missing ? ` (${missing} not found in the data source)` : ""}.\n`);
+console.log(`${"tag".padEnd(26)} ${"AI prec".padStart(8)} ${"AI rec".padStart(7)} ${"KW prec".padStart(8)} ${"KW rec".padStart(7)}  support`);
+const tags = [...new Set([...ai.rows, ...kw.rows].map((r) => r.tag))].sort();
+for (const tag of tags) {
+  const a = ai.rows.find((r) => r.tag === tag) ?? {};
+  const k = kw.rows.find((r) => r.tag === tag) ?? {};
+  const support = (a.tp ?? 0) + (a.fn ?? 0);
+  console.log(`${tag.padEnd(26)} ${pct(a.precision).padStart(8)} ${pct(a.recall).padStart(7)} ${pct(k.precision).padStart(8)} ${pct(k.recall).padStart(7)}  ${support}`);
 }
-for (const [provider, count] of Object.entries(providerCounts)) {
-  console.log(`  ${provider}: ${count}`);
+console.log(`${"OVERALL".padEnd(26)} ${pct(ai.overall.precision).padStart(8)} ${pct(ai.overall.recall).padStart(7)} ${pct(kw.overall.precision).padStart(8)} ${pct(kw.overall.recall).padStart(7)}`);
+
+const limit = Number(process.argv.includes("--failures") ? process.argv[process.argv.indexOf("--failures") + 1] : 15);
+console.log(`\nAI failure cases (first ${limit}):`);
+for (const f of ai.failures.slice(0, limit)) {
+  const r = byId.get(f.id);
+  console.log(`- ${f.id} [${r.rating}] missed: ${f.missed.join(", ") || "none"} | extra: ${f.extra.join(", ") || "none"}`);
+  console.log(`    + ${r.liked ?? ""}\n    - ${r.disliked ?? ""}`);
 }
-console.log();

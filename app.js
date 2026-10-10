@@ -153,12 +153,30 @@ async function collect(request) {
   const auth = checkBearer(request.headers?.authorization, environment().CRON_SECRET);
   if (!auth.ok) throw new HttpError(auth.status, auth.error);
   // Loaded lazily so read-only deployments never import the collector.
-  const [{ createDatabaseClient }, { recoverRunningRuns, startCollection }] =
-    await Promise.all([import("./lib/db.js"), import("./lib/collect.js")]);
+  const [{ createDatabaseClient }, { recoverRunningRuns, startCollection }, { enrichPending }, { resolvedLlmKeys }] =
+    await Promise.all([
+      import("./lib/db.js"),
+      import("./lib/collect.js"),
+      import("./lib/enrich-runner.js"),
+      import("./lib/llm.js"),
+    ]);
   const db = createDatabaseClient(environment());
   const recovered = await recoverRunningRuns(db, environment());
   const started = await startCollection(db, environment(), "cron");
-  return { recovered, started };
+  // Tag what was just ingested. Time-boxed to stay inside the function limit;
+  // anything left stays pending for the next cron or `npm run enrich`.
+  let enriched;
+  try {
+    enriched = await enrichPending(db, resolvedLlmKeys(environment()), {
+      maxReviews: 25,
+      deadlineMs: 35_000,
+      delayMs: 200,
+      backoffMs: 2_000,
+    });
+  } catch (error) {
+    enriched = { error: error.message };
+  }
+  return { recovered, started, enriched };
 }
 
 const routes = {

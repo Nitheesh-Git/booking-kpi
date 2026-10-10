@@ -63,3 +63,11 @@ Done: Audited the code against the brief. Fixed: dashboard had no current-week r
 Next: Export real data to `data/sample/reviews.json` with `npm run export-sample`, deploy to Vercel with `CRON_SECRET` set, and build the hand-labelled evaluation set.
 
 Blockers: The golden evaluation set needs human labelling.
+
+## 2026-10-10, data quality fixes
+
+Done: Found and fixed a rating bug that stored the 46 worst reviews as 8 to 10 out of 10; corrected those rows in the database. Found the collector is not fetching the newest reviews (newest stored review at Potts Point is 26 July); added a run-level check that flags this and made the actor input configurable. The daily cron now also AI-tags new reviews. Built the accuracy-test tooling (label template, keyword baseline, precision and recall). 61 tests pass.
+
+Next: Set the actor's newest-first sort option and rerun collection with a larger review cap; export the sample data; deploy; hand-label 100 reviews.
+
+Blockers: This build environment cannot reach Apify, Groq or Vercel, and database reads were blocked by a permission guard after the correction, so collection, export and deploy must be run from a laptop.

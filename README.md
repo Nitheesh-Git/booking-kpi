@@ -31,10 +31,12 @@ npm run export-sample                 # refresh data/sample/reviews.json from th
 npm run ingest-run -- <apifyRunId>    # re-ingest a finished Apify run
 npm run import -- file.csv --property darling-harbour   # fallback: load an export by hand
 npm run snapshot                      # this week's KPIs and insights in the terminal
+npm run label-template                # pick 100 reviews for hand labelling (accuracy test)
+npm run eval                          # AI and keyword baseline vs the hand labels
 npm run scan                          # check for key-like strings before pushing
 ```
 
-In production a daily Vercel cron calls `GET /api/collect` (protected by `CRON_SECRET`). Each call first ingests the runs started the day before, then starts new ones. See [docs/collection-method.md](docs/collection-method.md).
+In production a daily Vercel cron calls `GET /api/collect` (protected by `CRON_SECRET`). Each call ingests the runs started the day before, starts new ones, then AI-tags up to 25 new reviews (anything left waits for the next day or `npm run enrich`). See [docs/collection-method.md](docs/collection-method.md).
 
 ## What the dashboard shows
 
@@ -100,6 +102,18 @@ Booking.com has no public review API, so collection uses a third-party Apify act
 
 Full write-up, including reliability and terms-of-service considerations: [docs/collection-method.md](docs/collection-method.md).
 
+## Where AI is used
+
+AI is used in one place: **tagging each review with topics**. The rest is plain arithmetic, so every number can be checked by hand.
+
+| Part | Uses AI? |
+|---|---|
+| Topic tags on reviews (cleanliness, noise, staff...) | Yes: Groq `qwen/qwen3.8-27b`, OpenRouter `qwen/qwen-2.5-7b-instruct` as fallback |
+| Ratings, averages, week-on-week changes, positive/negative split | No: the guest's own score |
+| "What stands out" sentences and "Needs attention" flags | No: written by fixed rules from the numbers, so they never invent facts |
+
+Tagging runs at collection time (daily cron, and `npm run enrich`), never while someone is looking at the dashboard, so the dashboard is fast and works when AI providers are down.
+
 ## How topics are found
 
 An AI model (Groq, with OpenRouter as fallback) reads each review's title, liked and disliked text and returns topics, each with a polarity (complaint or praise), a severity from 1 to 3 and a short quote as evidence. Tags whose quote does not appear in the review are thrown away, which blocks invented tags. Reviews with no text are counted by rating only. Method and limits: [docs/insights-methodology.md](docs/insights-methodology.md).
@@ -125,6 +139,8 @@ An AI model (Groq, with OpenRouter as fallback) reads each review's title, liked
 | `APIFY_API_TOKEN`, `APIFY_ACTOR_ID` | Collection. Comma-separated actor IDs give a fallback order |
 | `GROQ_API_KEYS`, `OPENROUTER_API_KEYS` | AI topic tagging |
 | `CRON_SECRET` | Enables `GET /api/collect`. Unset means the endpoint returns 503 |
+| `APIFY_MAX_REVIEWS` | Reviews requested per property per run (default 100). Raise it for a one-off 12-month backfill |
+| `APIFY_INPUT_OVERRIDES` | JSON merged into the actor input, for example the actor's newest-first sort option |
 | `SAMPLE_DATA_PATH` | Optional alternative data file when Supabase is not configured |
 
 Database setup: create a Supabase project and run `supabase/migrations/0001_init.sql`.
@@ -136,9 +152,9 @@ Vercel only: static files from `public/`, one function (`api/index.js`) and a da
 ## Known limitations
 
 - **Third-party collector.** Collection depends on an Apify actor that can break when Booking.com changes its pages or blocks traffic. Drift shows up as `degraded` runs on the Data health tab; the CSV and JSON importer is the manual fallback. Automated collection may be restricted by Booking.com's terms; only public data is read, at low volume.
-- **100 newest reviews per run.** If a property ever receives more than 100 reviews between two runs, the oldest of those would be missed. At current volumes (a few a day) this is not a concern. Whether the actor returns reviews strictly newest first has not been independently verified (UNKNOWN).
+- **The actor does not return the newest reviews (VERIFIED problem, open).** The stored data shows it: each property has about 100 reviews spread over up to three years, and the newest stored review at Potts Point is from 26 July 2026 and at Darling Harbour from 31 August 2026. So "this week" is close to empty for most properties until the actor is told to sort newest first. The sort option's exact input name has to be read from the actor's Apify page and set in `APIFY_INPUT_OVERRIDES`. Runs that return nothing from the last 21 days are now marked "Partial" on the Data health tab, so this can no longer go unnoticed.
 - **Collection lag.** The cron starts runs one day and ingests them the next, so the dashboard is up to about a day behind Booking.com.
-- **AI tagging is not perfect.** Sarcasm, mixed sentences and very short reviews are hard. A hand-labelled evaluation set has not been built yet, so precision and recall are not measured (see the methodology doc).
+- **AI tagging is not perfect.** Sarcasm, mixed sentences and very short reviews are hard. The evaluation tooling is built (`npm run label-template`, `npm run eval`), but the 100 hand labels have not been done yet, so precision and recall are not measured.
 - **Low volumes.** Each property gets only a handful of reviews a week, so weekly averages move a lot. The dashboard flags small samples instead of hiding them.
 - **Sample data.** `data/sample/reviews.json` must be refreshed from the database with `npm run export-sample`; it is not committed until real collected data is exported.
 

@@ -39,3 +39,11 @@ The fallback returned a usable nested response with 75 reviews even though its i
 **Decision:** Replace the dark single-page layout with a light, card-based layout with tabs (Overview, Reviews, Data health), a sticky filter bar, dark mode from the operating system setting, and charts drawn as inline SVG instead of a chart library.
 
 **Why:** The previous page did not show this week vs last week, a property breakdown, positive and negative trends or insight sentences, and it injected review text into the page without escaping. Inline SVG avoids a CDN dependency and gives full control over accessibility (text summaries, tooltips, colour never the only signal).
+
+## 2026-10-10: Rating scale is set per source, never guessed (bug fix)
+
+**Problem (VERIFIED in the database):** `normalize.js` treated any score of 5 or below as a 1 to 5 score and doubled it. The primary actor's scores are already out of 10, so the 46 lowest-rated reviews were stored as 8s and 10s. Examples stored as 10/10: "Very dirty... cockroaches", "Double booked my booking". This hid the most negative reviews from every negative-review metric.
+
+**Fix:** The scale now comes from the source: 10 for the primary actor, 5 for the fallback actor, `--scale` on imports (default 10). Regression test added.
+
+**Data correction:** On 2026-10-10 the 46 affected rows (all with Booking `selected_review_id` links, so all from the primary actor) were halved back to their real scores and marked `exact`. Reversible with `rating_10 * 2` on the same rows if ever needed. Their AI tags were unaffected because the prompt does not include the rating.
