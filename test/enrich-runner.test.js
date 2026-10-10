@@ -72,6 +72,16 @@ describe("enrichPending", () => {
     expect(db.enrichment.get("c").status).toBe("pending");
   });
 
+  it("leaves rate-limited reviews pending without using up attempts", async () => {
+    const db = fakeDb(rows);
+    const llm = async () => {
+      throw new Error("LLM HTTP 429: rate limit");
+    };
+    const totals = await enrichPending(db, keys, { llm, delayMs: 0, backoffMs: 0 });
+    expect(totals).toMatchObject({ rateLimited: true, failed: 0 });
+    expect(db.enrichment.get("a")).toMatchObject({ status: "pending", attempts: 0 });
+  });
+
   it("records a failure without stopping and does nothing with no keys", async () => {
     const db = fakeDb(rows);
     const llm = async () => ({ provider: "t", model: "m", text: "not json" });

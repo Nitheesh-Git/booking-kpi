@@ -237,13 +237,14 @@ function renderOverview() {
   renderVolumeChart(d);
   renderRatingChart(d);
   renderTopics(d);
+  renderDataWarnings();
 }
 
 function renderKpis(d) {
   const cur = d.summary.current;
   const prev = d.summary.previous;
   const vs = comparisonWords();
-  const few = cur.lowVolume ? `<span class="badge" title="Fewer than ${d.lowVolume} reviews. Small samples swing a lot.">Few reviews</span>` : "";
+  const few = cur.lowVolume && cur.count > 0 ? `<span class="badge" title="Fewer than ${d.lowVolume} reviews. Small samples swing a lot.">Few reviews</span>` : "";
   const total = cur.count || 1;
   const prevText = prev.count ? `${fmtRating(prev.average)} from ${plural(prev.count, "review")}` : "no reviews";
   const top = d.topComplaint;
@@ -344,7 +345,7 @@ function renderProperties(d) {
   const rows = d.properties
     .map((p) => {
       const sel = state.property === p.id;
-      const few = p.current.lowVolume ? ` <span class="badge" title="Fewer than ${d.lowVolume} reviews">Few reviews</span>` : "";
+      const few = p.current.lowVolume && p.current.count > 0 ? ` <span class="badge" title="Fewer than ${d.lowVolume} reviews">Few reviews</span>` : "";
       return `<tr class="clickable${sel ? " selected" : ""}" data-property="${esc(p.id)}" tabindex="0" aria-selected="${sel}">
         <td><div class="prop-name">${esc(p.name)}</div><div class="prop-sub"><a href="${esc(p.bookingUrl)}" target="_blank" rel="noopener" data-stop>Booking.com page ↗</a></div></td>
         <td class="r"><div class="rating-cell"><span class="rating-big num">${fmtRating(p.current.average)}</span></div></td>
@@ -602,7 +603,7 @@ function renderTopics(d) {
           <span class="topic-track"><span class="topic-fill${t.complaints ? "" : " zero"}" style="display:block;width:${((t.complaintShare ?? 0) / max) * 100}%"></span></span>
           <span class="topic-value num">${fmtPct(t.complaintShare)} <span class="muted">${t.complaints} of ${t.reviews}</span></span>
           <span class="topic-change">${t.complaints + t.previousComplaints ? deltaChip(t.change, { good: "down", unit: " pts", digits: 0, scale: 100 }) : '<span class="muted">–</span>'}</span>
-          <span class="topic-praise num">${t.praise ? `${t.praise} reviews` : '<span class="muted">none</span>'}</span>
+          <span class="topic-praise num">${t.praise ? plural(t.praise, "review") : '<span class="muted">none</span>'}</span>
         </button>`,
       )
       .join("")}
@@ -752,18 +753,35 @@ async function loadHealth({ render = true } = {}) {
   }
 }
 
+/** Overview warning for properties whose stored data is stale or skewed. */
+function renderDataWarnings() {
+  const el = $("dataWarnings");
+  const h = state.health;
+  if (!h) return;
+  const affected = h.properties.filter((p) => p.issues?.length && (!state.property || p.id === state.property));
+  if (!affected.length) {
+    el.hidden = true;
+    return;
+  }
+  el.hidden = false;
+  el.className = "banner";
+  el.innerHTML = `${icons.warnTri}<div><strong>Some numbers are incomplete.</strong> ${affected
+    .map((p) => `${esc(p.name)}: ${esc(p.issues[0])}`)
+    .join(" ")} <button class="kpi-link" type="button" data-goto="health">See data health</button></div>`;
+}
+
 function renderHealthPill() {
   const h = state.health;
   const pill = $("healthPill");
-  if (h.source === "sample") {
+  if (h.status !== "ok") {
+    pill.className = "pill warn";
+    pill.innerHTML = `<span class="pill-dot"></span>Check data${h.source === "sample" ? " (sample)" : ""}`;
+  } else if (h.source === "sample") {
     pill.className = "pill muted";
     pill.innerHTML = '<span class="pill-dot"></span>Sample data';
-  } else if (h.status === "ok") {
+  } else {
     pill.className = "pill ok";
     pill.innerHTML = '<span class="pill-dot"></span>Data up to date';
-  } else {
-    pill.className = "pill warn";
-    pill.innerHTML = '<span class="pill-dot"></span>Check data';
   }
   const newest = h.properties.map((p) => p.newestReview).filter(Boolean).sort().at(-1);
   $("freshness").textContent = newest ? `Newest review ${fmtDay(sydneyDate(newest))}` : "";
@@ -772,8 +790,9 @@ function renderHealthPill() {
     banner.hidden = false;
     banner.className = "banner";
     banner.style.marginBottom = "20px";
-    banner.innerHTML = `${icons.warnTri}<span>Showing the saved sample of real reviews${h.exportedAt ? `, exported ${esc(fmtYear(sydneyDate(h.exportedAt)))}` : ""}. Live collection is not connected in this environment, so "this week" may have few or no reviews. Try "12 months".</span>`;
+    banner.innerHTML = `${icons.warnTri}<span>Showing the saved export of real collected reviews${h.exportedAt ? ` from ${esc(fmtYear(sydneyDate(h.exportedAt)))}` : ""}, not the live database. Reviews published after that date are not included.</span>`;
   }
+  renderDataWarnings();
 }
 
 const runStatus = {
@@ -795,10 +814,11 @@ function renderHealth() {
         <td><div class="prop-name">${esc(p.name)}</div></td>
         <td class="r num">${p.reviews}</td>
         <td>${p.newestReview ? esc(fmtYear(sydneyDate(p.newestReview))) : '<span class="muted">none</span>'}</td>
-        <td>${p.lastCollected ? esc(relativeTime(p.lastCollected)) : '<span class="muted">unknown</span>'}</td>
+        <td>${p.lastCollected ? esc(relativeTime(p.lastCollected)) : h.source === "sample" && h.exportedAt ? `<span class="muted">exported ${esc(fmtYear(sydneyDate(h.exportedAt)))}</span>` : '<span class="muted">unknown</span>'}</td>
         <td class="r num">${analysable ? fmtPct(e.done / analysable) : "–"}<div class="prop-sub">${e.done} of ${analysable}</div></td>
         <td class="r num">${e.pending ? `<span class="badge">${e.pending} waiting</span>` : "0"}</td>
         <td class="r num">${e.skipped}</td>
+        <td>${p.issues?.length ? p.issues.map((i) => `<div class="flag-detail">⚠ ${esc(i)}</div>`).join("") : '<span class="pill ok"><span class="pill-dot"></span>OK</span>'}</td>
       </tr>`;
     })
     .join("");
@@ -814,18 +834,22 @@ function renderHealth() {
         .join("")}</tbody></table></div>`
     : emptyState("No collection runs recorded", h.source === "sample" ? "Runs are shown when the dashboard is connected to the live database." : "");
 
-  const problem = h.recentProblems?.[0];
+  const problem = h.recentFailures?.[0];
   const summary =
     h.status === "ok"
       ? `<div class="all-clear">${icons.okCircle}<span>All four properties have data${h.lastSuccessfulRun ? ` and the last successful collection was ${esc(relativeTime(h.lastSuccessfulRun.finished_at ?? h.lastSuccessfulRun.started_at))}` : ""}.</span></div>`
-      : `<div class="banner">${icons.warnTri}<span>${problem ? `The latest collection ${problem.status === "failed" ? "failed" : "was only partly successful"}: ${esc(problem.error ?? "see the run list below")}. Existing reviews are kept; nothing was deleted.` : "At least one property has no reviews stored."}</span></div>`;
+      : `<div class="banner">${icons.warnTri}<span>${
+          problem
+            ? `A recent collection ${problem.status === "failed" ? "failed" : "was only partly successful"}: ${esc(problem.error ?? "see the run list below")}. Existing reviews are kept; nothing was deleted.`
+            : `${h.properties.filter((p) => p.issues?.length).length} of ${h.properties.length} properties have data problems. See "Checks" below. Numbers for those properties should not be relied on until collection is fixed.`
+        }</span></div>`;
 
   $("health").innerHTML = `
     <section class="card"><div class="card-body">${summary}</div></section>
     <section class="card">
       <div class="card-head"><div><h2 class="card-title">By property</h2><p class="card-sub">"Analysed" means topics have been tagged. Reviews without text are rating only and are not analysed.</p></div></div>
       <div class="card-body" style="padding:12px 0 0"><div class="table-wrap"><table>
-        <thead><tr><th>Property</th><th class="r">Reviews stored</th><th>Newest review</th><th>Last collected</th><th class="r">Analysed</th><th class="r">Waiting</th><th class="r">Rating only</th></tr></thead>
+        <thead><tr><th>Property</th><th class="r">Reviews stored</th><th>Newest review</th><th>Last collected</th><th class="r">Analysed</th><th class="r">Waiting</th><th class="r">Rating only</th><th>Checks</th></tr></thead>
         <tbody>${rows}</tbody></table></div></div>
     </section>
     <section class="card">
@@ -931,9 +955,10 @@ function bindEvents() {
   });
 
   document.addEventListener("click", (e) => {
-    const target = e.target.closest("[data-topic], [data-property], [data-action], [data-clear]");
+    const target = e.target.closest("[data-topic], [data-property], [data-action], [data-clear], [data-goto]");
     if (!target || e.target.closest("[data-stop]")) return;
-    if (target.dataset.topic) openTopic(target.dataset.topic, target.dataset.polarity ?? "");
+    if (target.dataset.goto) setTab(target.dataset.goto);
+    else if (target.dataset.topic) openTopic(target.dataset.topic, target.dataset.polarity ?? "");
     else if (target.dataset.property) {
       state.property = state.property === target.dataset.property ? "" : target.dataset.property;
       $("propertySelect").value = state.property;
@@ -1036,7 +1061,7 @@ async function init() {
 
   applyPeriodState();
   state.stale = { overview: true, reviews: true };
-  loadHealth({ render: false });
+  if (state.tab !== "health") loadHealth({ render: false });
   setTab(state.tab);
 }
 

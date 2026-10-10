@@ -160,6 +160,7 @@ async function collect(request) {
       import("./lib/enrich-runner.js"),
       import("./lib/llm.js"),
     ]);
+  const requestStarted = Date.now();
   const db = createDatabaseClient(environment());
   const recovered = await recoverRunningRuns(db, environment());
   const started = await startCollection(db, environment(), "cron");
@@ -169,7 +170,8 @@ async function collect(request) {
   try {
     enriched = await enrichPending(db, resolvedLlmKeys(environment()), {
       maxReviews: 25,
-      deadlineMs: 35_000,
+      // Function limit is 60 s (vercel.json); keep 15 s for the last LLM call and the response.
+      deadlineMs: Math.max(0, 45_000 - (Date.now() - requestStarted)),
       delayMs: 200,
       backoffMs: 2_000,
     });

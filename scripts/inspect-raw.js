@@ -1,5 +1,5 @@
 /**
- * inspect-raw — Fetch and pretty-print raw rows from Supabase for debugging.
+ * inspect-raw: fetch and pretty-print raw rows from Supabase for debugging.
  *
  * Usage:
  *   npm run inspect -- reviews --limit 5

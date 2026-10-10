@@ -53,6 +53,13 @@ export const topicLabels = Object.freeze({
 /** Fewer reviews than this in a period is flagged as low volume. */
 export const lowVolume = 5;
 
+/**
+ * A property whose newest review is older than this is flagged, both on the
+ * collection run and on the Data health tab. Each property normally gets new
+ * Booking.com reviews every few days.
+ */
+export const staleAfterDays = 21;
+
 /** Number of weeks shown in trend charts and sparklines. */
 export const trendWeeks = 12;
 

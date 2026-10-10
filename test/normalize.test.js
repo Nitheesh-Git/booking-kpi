@@ -95,3 +95,39 @@ describe("collection recency check", () => {
     expect(actorInput({ bookingUrl: "x" }, false, { APIFY_INPUT_OVERRIDES: "not json" }).maxReviews).toBe(100);
   });
 });
+
+describe("actor detection", () => {
+  it("identifies the fallback actor from the run input, not the credential", async () => {
+    const { ranOnFallback } = await import("../lib/collect.js");
+    const { actorInput } = await import("../lib/apify.js");
+    const property = { bookingUrl: "https://example.test/h.html" };
+    expect(ranOnFallback(actorInput(property, true))).toBe(true);
+    expect(ranOnFallback(actorInput(property, false))).toBe(false);
+  });
+});
+
+describe("prompt building", () => {
+  it("inserts review text literally, even with $ patterns and placeholders", async () => {
+    const { buildPrompt } = await import("../lib/enrich.js");
+    const prompt = buildPrompt({ title: "{{liked}}", likedText: "cost $'extra' $&", dislikedText: null });
+    expect(prompt).toContain("Title: {{liked}}");
+    expect(prompt).toContain("Liked: cost $'extra' $&");
+  });
+});
+
+describe("sample round trip", () => {
+  it("re-ingests the committed sample with no rejections and real scores", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { reviews } = JSON.parse(readFileSync("data/sample/reviews.json", "utf8"));
+    for (const id of ["olympic-paddington", "potts-point", "central-sydney", "darling-harbour"]) {
+      const items = reviews.filter((r) => r.propertyId === id);
+      const prepared = prepareReviews(items, id, new Date("2026-10-11T00:00:00Z"), { ratingScale: 10 });
+      expect(prepared.rejected).toEqual([]);
+      prepared.accepted.forEach((r, i) => {
+        expect(r.rating10).toBe(items[i].rating);
+        expect(r.likedText).toBe(items[i].liked ?? null);
+      });
+      expect(new Set(prepared.accepted.map((r) => r.dedupeKey)).size).toBe(items.length);
+    }
+  });
+});

@@ -27,13 +27,14 @@ const byId = new Map(
   (await source.loadReviews({ fromUtc: "2000-01-01T00:00:00Z", toUtc: "2100-01-01T00:00:00Z" })).map((r) => [r.id, r]),
 );
 
-const labelled = golden.reviews.filter((g) => byId.has(g.id));
+// Only reviews the AI has actually tagged are a fair test of the AI.
+const labelled = golden.reviews.filter((g) => byId.get(g.id)?.enrichmentStatus === "done");
 const missing = golden.reviews.length - labelled.length;
 const ai = scoreTags(labelled.map((g) => ({ id: g.id, expected: g.labels, predicted: byId.get(g.id).topics })));
 const kw = scoreTags(labelled.map((g) => ({ id: g.id, expected: g.labels, predicted: keywordTags(g) })));
 
 const pct = (v) => (v == null ? "  n/a" : `${Math.round(v * 100)}%`.padStart(5));
-console.log(`\nEvaluated ${labelled.length} hand-labelled reviews${missing ? ` (${missing} not found in the data source)` : ""}.\n`);
+console.log(`\nEvaluated ${labelled.length} hand-labelled reviews${missing ? ` (${missing} skipped: not found or not yet tagged by the AI)` : ""}.\n`);
 console.log(`${"tag".padEnd(26)} ${"AI prec".padStart(8)} ${"AI rec".padStart(7)} ${"KW prec".padStart(8)} ${"KW rec".padStart(7)}  support`);
 const tags = [...new Set([...ai.rows, ...kw.rows].map((r) => r.tag))].sort();
 for (const tag of tags) {
