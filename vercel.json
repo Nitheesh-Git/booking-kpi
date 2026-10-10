@@ -5,5 +5,17 @@
       "source": "/api/(.*)",
       "destination": "/api/index.js?path=$1"
     }
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "data/sample/**",
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/collect",
+      "schedule": "0 19 * * *"
+    }
   ]
 }

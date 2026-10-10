@@ -22,6 +22,7 @@ export const properties = [
   },
 ];
 
+/** Ratings are on Booking.com's 10-point scale. Negative is below, positive is at or above. */
 export const thresholds = Object.freeze({ negative: 6, positive: 8 });
 export const timezone = "Australia/Sydney";
 export const topics = Object.freeze([
@@ -35,3 +36,30 @@ export const topics = Object.freeze([
   "value_for_money",
   "other",
 ]);
+
+/** Plain-language names shown to operations staff. */
+export const topicLabels = Object.freeze({
+  cleanliness: "Cleanliness",
+  check_in: "Check-in",
+  staff: "Staff and reception",
+  noise: "Noise",
+  facilities: "Facilities",
+  location: "Location",
+  room_condition: "Room condition",
+  value_for_money: "Value for money",
+  other: "Other",
+});
+
+/** Fewer reviews than this in a period is flagged as low volume. */
+export const lowVolume = 5;
+
+/** Number of weeks shown in trend charts and sparklines. */
+export const trendWeeks = 12;
+
+/** Needs-attention rules. Each flag shows its reason and counts. */
+export const attentionRules = Object.freeze({
+  propertyDrop: { points: 0.5, minReviews: lowVolume },
+  topicRise: { percentagePoints: 10, minComplaints: 3 },
+  negativeBurst: { days: 7, count: 3 },
+  severeIssue: { days: 7, severity: 3 },
+});

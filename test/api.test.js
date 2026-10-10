@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import handler from "../app.js";
+import { afterEach, describe, expect, it } from "vitest";
+import handler, { __setSource } from "../app.js";
 
 function createMockResponse() {
   let statusCode = 200;
@@ -15,54 +15,83 @@ function createMockResponse() {
     },
     getStatusCode: () => statusCode,
     getHeaders: () => headers,
-    getBody: () => body,
     getJson: () => JSON.parse(body),
   };
 }
 
-describe("GET /api/health", () => {
-  it("returns ok=true and phase=P3", async () => {
-    const req = { url: "/api/health", method: "GET" };
-    const res = createMockResponse();
+async function call(url, { method = "GET", headers = {} } = {}) {
+  const res = createMockResponse();
+  await handler({ url, method, headers }, res);
+  return res;
+}
 
-    await handler(req, res);
+const fakeSource = {
+  kind: "test",
+  async loadReviews() {
+    return [];
+  },
+  async loadHealth() {
+    return { status: "ok", properties: [] };
+  },
+};
 
-    expect(res.getStatusCode()).toBe(200);
-    const json = res.getJson();
-    expect(json.ok).toBe(true);
-    expect(json.phase).toBe("P3");
+afterEach(() => __setSource(undefined, undefined));
+
+describe("routing", () => {
+  it("returns 404 for unknown routes even without a data source", async () => {
+    __setSource(null, {});
+    const res = await call("/api/nonexistent");
+    expect(res.getStatusCode()).toBe(404);
   });
 
-  it("handles forwarded path parameter from Vercel rewrite", async () => {
-    const req = { url: "/api/index.js?path=health", method: "GET" };
-    const res = createMockResponse();
-
-    await handler(req, res);
-
+  it("handles the Vercel rewrite path parameter", async () => {
+    __setSource(fakeSource, {});
+    const res = await call("/api/index.js?path=health");
     expect(res.getStatusCode()).toBe(200);
     expect(res.getJson().ok).toBe(true);
   });
-});
 
-describe("GET /api/unknown", () => {
-  it("returns 404 for unknown route", async () => {
-    const req = { url: "/api/nonexistent", method: "GET" };
-    const res = createMockResponse();
+  it("returns 503 with a clear message when no data source exists", async () => {
+    __setSource(null, {});
+    const res = await call("/api/dashboard");
+    expect(res.getStatusCode()).toBe(503);
+    expect(res.getJson().error).toMatch(/No data source/);
+  });
 
-    await handler(req, res);
+  it("rejects bad filters with 400", async () => {
+    __setSource(fakeSource, {});
+    expect((await call("/api/dashboard?property=nope")).getStatusCode()).toBe(400);
+    expect((await call("/api/dashboard?from=2026-13-01")).getStatusCode()).toBe(400);
+    expect((await call("/api/dashboard?from=2026-10-10&to=2026-10-01")).getStatusCode()).toBe(400);
+    expect((await call("/api/reviews?sort=random")).getStatusCode()).toBe(400);
+  });
 
-    expect(res.getStatusCode()).toBe(404);
-    expect(res.getJson()).toEqual({ error: "Not found" });
+  it("serves an empty dashboard without errors", async () => {
+    __setSource(fakeSource, {});
+    const res = await call("/api/dashboard?from=2026-10-05&to=2026-10-10");
+    expect(res.getStatusCode()).toBe(200);
+    const json = res.getJson();
+    expect(json.summary.current.count).toBe(0);
+    expect(json.properties).toHaveLength(4);
+    expect(json.insights[0].text).toMatch(/No reviews/);
   });
 });
 
-describe("OPTIONS /api/*", () => {
-  it("handles CORS preflight", async () => {
-    const req = { url: "/api/health", method: "OPTIONS" };
-    const res = createMockResponse();
+describe("protected collect endpoint", () => {
+  it("fails closed with 503 when CRON_SECRET is not set", async () => {
+    __setSource(fakeSource, {});
+    expect((await call("/api/collect")).getStatusCode()).toBe(503);
+  });
 
-    await handler(req, res);
+  it("returns 401 for a wrong secret", async () => {
+    __setSource(fakeSource, { CRON_SECRET: "expected-secret" });
+    const res = await call("/api/collect", { headers: { authorization: "Bearer wrong" } });
+    expect(res.getStatusCode()).toBe(401);
+  });
+});
 
-    expect(res.getStatusCode()).toBe(204);
+describe("OPTIONS", () => {
+  it("answers preflight with 204", async () => {
+    expect((await call("/api/health", { method: "OPTIONS" })).getStatusCode()).toBe(204);
   });
 });

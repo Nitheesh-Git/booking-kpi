@@ -9,6 +9,7 @@ export default [
       sourceType: "module",
       globals: {
         AbortSignal: "readonly",
+        Buffer: "readonly",
         URL: "readonly",
         URLSearchParams: "readonly",
         console: "readonly",
@@ -28,6 +29,10 @@ export default [
       globals: {
         document: "readonly",
         window: "readonly",
+        history: "readonly",
+        location: "readonly",
+        Intl: "readonly",
+        clearTimeout: "readonly",
       },
     },
   },
