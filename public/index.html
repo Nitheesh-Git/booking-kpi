@@ -3,127 +3,205 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Azzurro Review Insights | Operations KPI Dashboard</title>
+    <title>Azzurro Review Insights</title>
+    <meta name="description" content="Booking.com guest review insights for Azzurro Hotels operations staff." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="/style.css" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d5fd0'/%3E%3Ctext x='16' y='22' font-family='Arial' font-weight='700' font-size='17' fill='white' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E" />
   </head>
   <body>
-    <div class="container">
-      <!-- Header -->
-      <header>
-        <div class="brand">
-          <h1>Azzurro Review Insights</h1>
-          <span class="badge-health" id="healthBadge">Live Phase P3</span>
+    <header class="appbar">
+      <div class="appbar-inner">
+        <a class="brand" href="/" aria-label="Azzurro Review Insights home">
+          <span class="brand-mark" aria-hidden="true">A</span>
+          <span>
+            <span class="brand-name">Azzurro Review Insights</span><br />
+            <span class="brand-sub">Booking.com guest reviews, 4 Sydney properties</span>
+          </span>
+        </a>
+        <nav class="tabs" role="tablist" aria-label="Sections">
+          <button class="tab" role="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true" data-tab="overview">Overview</button>
+          <button class="tab" role="tab" id="tab-reviews" aria-controls="panel-reviews" aria-selected="false" data-tab="reviews">Reviews</button>
+          <button class="tab" role="tab" id="tab-health" aria-controls="panel-health" aria-selected="false" data-tab="health">Data health</button>
+        </nav>
+        <div class="appbar-status">
+          <span class="freshness" id="freshness"></span>
+          <button class="pill muted" id="healthPill" type="button">Checking data</button>
         </div>
-        <div class="controls">
-          <select id="propertySelect" aria-label="Select Property">
-            <option value="">Loading properties...</option>
-          </select>
-          <select id="daysSelect" aria-label="Select Window">
-            <option value="30">Last 30 Days</option>
-            <option value="90" selected>Last 90 Days</option>
-            <option value="180">Last 180 Days</option>
-            <option value="365">Last 365 Days</option>
-            <option value="1000">All Time</option>
-          </select>
-        </div>
-      </header>
-
-      <!-- Metric KPI Cards -->
-      <section class="metrics-grid">
-        <!-- Average Rating -->
-        <div class="card">
-          <div class="card-title">Average Rating</div>
-          <div class="card-value">
-            <span id="avgRating">–</span><small>/ 10</small>
-          </div>
-          <div class="card-subtitle" id="totalReviews">Loading...</div>
-          <div class="bar-wrap">
-            <div class="bar-fill bar-accent" style="width: 100%"></div>
-          </div>
-        </div>
-
-        <!-- Sentiment Score -->
-        <div class="card">
-          <div class="card-title">AI Sentiment Score</div>
-          <div class="card-value" id="avgSentiment">–</div>
-          <div class="card-subtitle" id="enrichedReviews">Loading...</div>
-          <div class="bar-wrap">
-            <div class="bar-fill bar-positive" id="sentimentBar" style="width: 0%"></div>
-          </div>
-        </div>
-
-        <!-- Positive Reviews -->
-        <div class="card">
-          <div class="card-title">Positive (≥ 8.0)</div>
-          <div class="card-value" id="posPct">–</div>
-          <div class="card-subtitle" id="posCount">–</div>
-          <div class="bar-wrap">
-            <div class="bar-fill bar-positive" id="posBar" style="width: 0%"></div>
-          </div>
-        </div>
-
-        <!-- Neutral Reviews -->
-        <div class="card">
-          <div class="card-title">Neutral (6.0 – 7.9)</div>
-          <div class="card-value" id="neuPct">–</div>
-          <div class="card-subtitle" id="neuCount">–</div>
-          <div class="bar-wrap">
-            <div class="bar-fill bar-neutral" id="neuBar" style="width: 0%"></div>
-          </div>
-        </div>
-
-        <!-- Negative Reviews -->
-        <div class="card">
-          <div class="card-title">Negative (< 6.0)</div>
-          <div class="card-value" id="negPct">–</div>
-          <div class="card-subtitle" id="negCount">–</div>
-          <div class="bar-wrap">
-            <div class="bar-fill bar-negative" id="negBar" style="width: 0%"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Main Visualizations Grid -->
-      <div class="content-grid">
-        <!-- Topic Insights Panel -->
-        <section class="panel">
-          <div class="panel-header">
-            <h2 class="panel-title">Operations Topic Insights</h2>
-            <small style="color: var(--text-muted)">Click a topic to filter reviews</small>
-          </div>
-          <div class="topic-list" id="topicList">
-            <div class="empty-state">Loading topic insights...</div>
-          </div>
-        </section>
-
-        <!-- Weekly Trend Panel -->
-        <section class="panel">
-          <div class="panel-header">
-            <h2 class="panel-title">Weekly Rating Trend</h2>
-            <small style="color: var(--text-muted)">12-week Sydney timezone</small>
-          </div>
-          <div class="trend-chart" id="trendChart">
-            <div class="empty-state">Loading trend data...</div>
-          </div>
-        </section>
       </div>
+    </header>
 
-      <!-- Reviews Feed -->
-      <section class="reviews-section">
-        <div class="reviews-header">
-          <h2 class="panel-title">Customer Reviews Feed</h2>
-          <div class="feed-filters">
-            <button class="btn-pill active" data-polarity="">All Ratings</button>
-            <button class="btn-pill" data-polarity="positive">Positive (≥8)</button>
-            <button class="btn-pill" data-polarity="negative">Negative (&lt;6)</button>
+    <div class="filterbar" role="region" aria-label="Filters">
+      <div class="filterbar-inner">
+        <label class="field">
+          <span class="field-label">Property</span>
+          <select class="select" id="propertySelect">
+            <option value="">All properties</option>
+          </select>
+        </label>
+        <div class="field" role="group" aria-labelledby="periodLabel">
+          <span class="field-label" id="periodLabel">Period</span>
+          <div class="segmented" id="periodPresets">
+            <button type="button" data-preset="this-week" aria-pressed="true">This week</button>
+            <button type="button" data-preset="last-week" aria-pressed="false">Last week</button>
+            <button type="button" data-preset="4-weeks" aria-pressed="false">4 weeks</button>
+            <button type="button" data-preset="12-weeks" aria-pressed="false">12 weeks</button>
+            <button type="button" data-preset="12-months" aria-pressed="false">12 months</button>
+            <button type="button" data-preset="custom" aria-pressed="false">Custom</button>
+          </div>
+          <div class="custom-range" id="customRange">
+            <input class="input" type="date" id="fromDate" aria-label="From date" />
+            <span class="muted">to</span>
+            <input class="input" type="date" id="toDate" aria-label="To date" />
+            <button class="btn primary" type="button" id="applyRange">Apply</button>
           </div>
         </div>
-        <div id="reviewsFeed">
-          <div class="empty-state">Loading reviews...</div>
-        </div>
-      </section>
+        <p class="period-caption" id="periodCaption" aria-live="polite"></p>
+      </div>
     </div>
 
-    <script src="/dashboard.js"></script>
+    <main>
+      <div id="sourceBanner" hidden></div>
+
+      <!-- Overview -->
+      <section id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" class="stack">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title" id="overviewTitle">Overview</h1>
+            <p class="page-sub" id="overviewSub">How guests rated us, and what they keep mentioning.</p>
+          </div>
+        </div>
+
+        <div class="grid-4" id="kpis" aria-live="polite"></div>
+
+        <div class="grid-insights">
+          <section class="card" aria-labelledby="insightsTitle">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title" id="insightsTitle">What stands out</h2>
+                <p class="card-sub">Written automatically from the numbers below.</p>
+              </div>
+            </div>
+            <div class="card-body" id="insights"></div>
+          </section>
+          <section class="card" aria-labelledby="attentionTitle">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title" id="attentionTitle">Needs attention</h2>
+                <p class="card-sub">Rating drops, rising complaints and serious issues.</p>
+              </div>
+            </div>
+            <div class="card-body" id="attention"></div>
+          </section>
+        </div>
+
+        <section class="card" aria-labelledby="propertiesTitle">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title" id="propertiesTitle">Properties</h2>
+              <p class="card-sub">Select a row to focus the dashboard on that property.</p>
+            </div>
+          </div>
+          <div class="card-body" style="padding: 12px 0 0" id="properties"></div>
+        </section>
+
+        <div class="grid-2">
+          <section class="card" aria-labelledby="volumeTitle">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title" id="volumeTitle">Positive and negative reviews per week</h2>
+                <p class="card-sub">Last 12 weeks. Shaded weeks are in the selected period.</p>
+              </div>
+            </div>
+            <div class="card-body" id="volumeChart"></div>
+          </section>
+          <section class="card" aria-labelledby="ratingTitle">
+            <div class="card-head">
+              <div>
+                <h2 class="card-title" id="ratingTitle">Average rating per week</h2>
+                <p class="card-sub">Out of 10. Weeks without reviews are left blank.</p>
+              </div>
+            </div>
+            <div class="card-body" id="ratingChart"></div>
+          </section>
+        </div>
+
+        <section class="card" aria-labelledby="topicsTitle">
+          <div class="card-head">
+            <div>
+              <h2 class="card-title" id="topicsTitle">What guests complain about</h2>
+              <p class="card-sub">Share of reviews in the period with a complaint on each topic. Select a topic to read those reviews.</p>
+            </div>
+          </div>
+          <div class="card-body" style="padding: 12px 0 0" id="topics"></div>
+        </section>
+
+        <details class="card">
+          <summary class="card-head" style="padding-bottom: 16px; cursor: pointer">
+            <span class="card-title">How these numbers work</span>
+          </summary>
+          <div class="card-body">
+            <dl class="glossary" id="glossary"></dl>
+          </div>
+        </details>
+      </section>
+
+      <!-- Reviews -->
+      <section id="panel-reviews" role="tabpanel" aria-labelledby="tab-reviews" class="stack" hidden>
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Reviews</h1>
+            <p class="page-sub">Read what guests wrote. Uses the property and period selected above.</p>
+          </div>
+        </div>
+        <section class="card">
+          <div class="feed-toolbar">
+            <label class="search">
+              <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M11 11l3.5 3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <span class="sr-only">Search review text</span>
+              <input class="input" type="search" id="searchInput" placeholder="Search review text, for example: shower, wifi, noise" />
+            </label>
+            <div class="segmented" id="sentimentFilter" role="group" aria-label="Rating">
+              <button type="button" data-sentiment="" aria-pressed="true">All</button>
+              <button type="button" data-sentiment="positive" aria-pressed="false">Positive 8+</button>
+              <button type="button" data-sentiment="neutral" aria-pressed="false">Neutral</button>
+              <button type="button" data-sentiment="negative" aria-pressed="false">Negative &lt;6</button>
+            </div>
+            <label class="sr-only" for="topicSelect">Topic</label>
+            <select class="select" id="topicSelect">
+              <option value="">All topics</option>
+            </select>
+            <label class="sr-only" for="sortSelect">Sort</label>
+            <select class="select" id="sortSelect">
+              <option value="newest">Newest first</option>
+              <option value="lowest">Lowest rating first</option>
+              <option value="highest">Highest rating first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+          </div>
+          <div class="feed-meta" id="feedMeta"></div>
+          <div id="feed" aria-live="polite"></div>
+          <div class="feed-more" id="feedMore" hidden>
+            <button class="btn" type="button" id="loadMore">Load more reviews</button>
+          </div>
+        </section>
+      </section>
+
+      <!-- Data health -->
+      <section id="panel-health" role="tabpanel" aria-labelledby="tab-health" class="stack" hidden>
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Data health</h1>
+            <p class="page-sub">Is the data complete and up to date? Check here before relying on the numbers.</p>
+          </div>
+        </div>
+        <div id="health" class="stack"></div>
+      </section>
+    </main>
+
+    <div class="tooltip" id="tooltip" role="tooltip"></div>
+    <script src="/dashboard.js" type="module"></script>
   </body>
 </html>
