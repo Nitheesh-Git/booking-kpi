@@ -829,7 +829,7 @@ function renderHealth() {
           const [cls, word] = runStatus[r.status] ?? ["muted", r.status];
           return `<tr><td>${esc(relativeTime(r.started_at))}</td><td>${esc(state.config.properties.find((p) => p.id === r.property_id)?.name ?? "All")}<div class="prop-sub">${esc(r.actor ? r.actor.split("/")[0] : r.trigger)}</div></td><td><span class="pill ${cls}"><span class="pill-dot"></span>${esc(word)}</span></td>
             <td class="r num">${r.items_fetched}</td><td class="r num">${r.created}</td><td class="r num">${r.updated}</td><td class="r num">${r.unchanged}</td><td class="r num">${r.rejected}</td>
-            <td class="muted" style="max-width:280px">${esc(r.error ?? "")}</td></tr>`;
+            <td class="muted" style="max-width:320px">${esc(r.error ?? "")}${r.notes ? `<details><summary>Fields</summary><div class="prop-sub">${esc(r.notes)}</div></details>` : ""}</td></tr>`;
         })
         .join("")}</tbody></table></div>`
     : emptyState("No collection runs recorded", h.source === "sample" ? "Runs are shown when the dashboard is connected to the live database." : "");

@@ -73,3 +73,9 @@ The fallback returned a usable nested response with 75 reviews even though its i
 **How:** Input is mapped from each actor's published input schema (no guessed sort values); runs are incremental from the newest stored review minus 14 days; a property falls through to the next actor on start failure, failed run, empty output, stale output or a 1 to 5 looking scale; reviews are matched across actors by Booking's own id or by content.
 
 **Trade-off:** More moving parts than one actor. In exchange, one vendor breaking or being blocked no longer stops collection, and a misbehaving actor is caught and skipped automatically.
+
+## 2026-10-10: Re-collection never blanks stored fields (incident and fix)
+
+**Incident:** The first `apt_marble` run matched all 75 Olympic Paddington reviews already stored (no duplicates), but the update path replaced whole rows. The actor did not supply replies, country, traveller type, room, stay date or review link, so 52 rows lost those fields. Ratings and text were unaffected.
+
+**Fix:** Updates now merge: a field the source leaves empty never overwrites a stored value, and publication date and keys never change after insert. The lost values were restored from the committed sample export and verified by checksum against it (43 replies, 75 countries, rooms and links). Each run now records the field names the actor sent and which review fields it left empty, shown on the Data health tab.

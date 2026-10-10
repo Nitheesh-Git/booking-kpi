@@ -280,3 +280,28 @@ describe("backfill once, then incremental", () => {
     expect(potts.input).toMatchObject({ onlyReviewsSince: "2026-09-21", maxReviewsPerHotel: 300 });
   });
 });
+
+describe("re-collecting never blanks stored fields", () => {
+  it("keeps replies and details the new actor did not send, and updates what it did", async () => {
+    const { mergeChanges } = await import("../lib/ingest.js");
+    const stored = { rating_10: 4, title: "Old", liked_text: "Location", disliked_text: "Dirty", reply_text: "Sorry", reviewer_country: "Australia", room_name: "Pod", nights: 2 };
+    const incoming = { rating_10: 4, title: "Old", liked_text: "Location ", disliked_text: "Dirty", reply_text: null, reviewer_country: null, room_name: null, nights: null, traveller_type: "Couple" };
+    expect(mergeChanges(stored, incoming)).toEqual({ traveller_type: "Couple" });
+    expect(mergeChanges(stored, { ...incoming, reply_text: "Sorry, fixed now" })).toMatchObject({ reply_text: "Sorry, fixed now" });
+  });
+
+  it("counts a sparse re-collection of the same review as unchanged", async () => {
+    const db = fakeDb();
+    const api = fakeApi();
+    const [first] = await startCollection(db, env, "cron", { api });
+    api.getActorRun = async () => ({ status: "SUCCEEDED", defaultDatasetId: "ds" });
+    const date = new Date().toISOString();
+    api.getDatasetItems = async () => [{ reviewId: "B1", score: 7, positive: "Nice", hotelResponse: "Thanks!", country: "Australia", reviewDate: date }];
+    await ingestActorRun(db, env, first.localRunId, first.apifyRunId, undefined, { api });
+    const [second] = await startCollection(db, env, "cron", { api, now: new Date(Date.now() + 7 * 3_600_000) });
+    api.getDatasetItems = async () => [{ reviewId: "B1", score: 7, positive: "Nice", reviewDate: date }];
+    const out = await ingestActorRun(db, env, second.localRunId, second.apifyRunId, undefined, { api });
+    expect(out.counts).toMatchObject({ created: 0, updated: 0, unchanged: 1 });
+    expect(db.tables.reviews[0]).toMatchObject({ reply_text: "Thanks!", reviewer_country: "Australia" });
+  });
+});
