@@ -87,3 +87,11 @@ Done: Deployed to production at https://booking-kpi.vercel.app. Fixed a deploy-o
 Next: Set the actor's newest-first sort and re-collect; merge this branch into main so the production branch matches.
 
 Blockers: None for deployment.
+
+## 2026-10-10, homepage fix on Vercel
+
+Done: The production homepage returned {"error":"Not found"} because the Vercel project was detected as a Node server, sending every request to the API function. `vercel.json` now pins the framework to Other with `public/` as static output, so the dashboard is served as static files and only `/api/*` reaches the function. Tested on a preview first, then deployed to production; https://booking-kpi.vercel.app/ serves the dashboard.
+
+Next: Merge this branch into main, fix the actor's newest-first sort and re-collect.
+
+Blockers: None.
