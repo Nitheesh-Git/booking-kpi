@@ -90,6 +90,25 @@ describe("protected collect endpoint", () => {
   });
 });
 
+describe("protected enrich continuation", () => {
+  it("fails closed with 503 when CRON_SECRET is not set", async () => {
+    __setSource(fakeSource, {});
+    expect((await call("/api/enrich", { headers: { "x-enrich-hop": "1" } })).getStatusCode()).toBe(503);
+  });
+
+  it("returns 401 for a wrong secret", async () => {
+    __setSource(fakeSource, { CRON_SECRET: "expected-secret" });
+    const res = await call("/api/enrich", { headers: { authorization: "Bearer wrong", "x-enrich-hop": "1" } });
+    expect(res.getStatusCode()).toBe(401);
+  });
+
+  it("rejects a missing hop number", async () => {
+    __setSource(fakeSource, { CRON_SECRET: "s" });
+    const res = await call("/api/enrich", { headers: { authorization: "Bearer s" } });
+    expect(res.getStatusCode()).toBe(400);
+  });
+});
+
 describe("OPTIONS", () => {
   it("answers preflight with 204", async () => {
     expect((await call("/api/health", { method: "OPTIONS" })).getStatusCode()).toBe(204);

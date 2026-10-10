@@ -9,7 +9,10 @@
  *
  * Protected (fail closed, see lib/auth.js):
  *   GET /api/collect    daily Vercel cron: ingest finished runs, then start new ones
+ *   GET /api/enrich     AI tagging continuation, started by /api/collect (lib/continue-enrich.js)
  */
+
+import { waitUntil } from "@vercel/functions";
 
 import {
   properties,
@@ -21,6 +24,7 @@ import {
 } from "./dashboard.config.js";
 import { buildDashboard, filterFeed } from "./lib/analytics.js";
 import { checkBearer } from "./lib/auth.js";
+import { IDLE_WAIT_MS } from "./lib/continue-enrich.js";
 import { loadEnvironment } from "./lib/env.js";
 import { createSource } from "./lib/repository.js";
 import {
@@ -149,36 +153,89 @@ async function feed(params) {
   });
 }
 
-async function collect(request) {
-  const auth = checkBearer(request.headers?.authorization, environment().CRON_SECRET);
+function requireCronSecret(request) {
+  const auth = checkBearer(
+    request.headers?.authorization,
+    environment().CRON_SECRET,
+  );
   if (!auth.ok) throw new HttpError(auth.status, auth.error);
-  // Loaded lazily so read-only deployments never import the collector.
-  const [{ createDatabaseClient }, { recoverRunningRuns, startCollection }, { enrichPending }, { resolvedLlmKeys }] =
-    await Promise.all([
-      import("./lib/db.js"),
-      import("./lib/collect.js"),
-      import("./lib/enrich-runner.js"),
-      import("./lib/llm.js"),
-    ]);
-  const requestStarted = Date.now();
-  const db = createDatabaseClient(environment());
-  const recovered = await recoverRunningRuns(db, environment());
-  const started = await startCollection(db, environment(), "cron");
-  // Tag what was just ingested. Time-boxed to stay inside the function limit;
-  // anything left stays pending for the next cron or `npm run enrich`.
+}
+
+/**
+ * Tag one time-boxed batch of pending reviews, then hand the rest to the next
+ * hop if there is more to do (see lib/continue-enrich.js).
+ *
+ * @param {number} hop  0 for the cron, 1+ for continuations
+ * @param {number} requestStarted  ms timestamp the function call began
+ * @param {number} [idle]  rate-limited hops in a row before this one
+ */
+async function enrichBatch(hop, requestStarted, idle = 0) {
+  const [
+    { createDatabaseClient },
+    { enrichPending },
+    { resolvedLlmKeys },
+    { shouldContinue, startNextHop },
+  ] = await Promise.all([
+    import("./lib/db.js"),
+    import("./lib/enrich-runner.js"),
+    import("./lib/llm.js"),
+    import("./lib/continue-enrich.js"),
+  ]);
   let enriched;
   try {
-    enriched = await enrichPending(db, resolvedLlmKeys(environment()), {
-      maxReviews: 25,
-      // Function limit is 60 s (vercel.json); keep 15 s for the last LLM call and the response.
-      deadlineMs: Math.max(0, 45_000 - (Date.now() - requestStarted)),
-      delayMs: 200,
-      backoffMs: 2_000,
-    });
+    enriched = await enrichPending(
+      createDatabaseClient(environment()),
+      resolvedLlmKeys(environment()),
+      {
+        maxReviews: 40,
+        // Function limit is 60 s (vercel.json); keep 15 s for the last LLM call and the hand-off.
+        deadlineMs: Math.max(0, 45_000 - (Date.now() - requestStarted)),
+        delayMs: 200,
+        backoffMs: 2_000,
+      },
+    );
   } catch (error) {
     enriched = { error: error.message };
   }
+  const decision = shouldContinue(enriched, hop, idle);
+  const next = decision.next
+    ? await startNextHop(environment(), hop + 1, decision.idle)
+    : null;
+  return { ...enriched, next };
+}
+
+async function collect(request) {
+  requireCronSecret(request);
+  const requestStarted = Date.now();
+  // Loaded lazily so read-only deployments never import the collector.
+  const [{ createDatabaseClient }, { recoverRunningRuns, startCollection }] =
+    await Promise.all([import("./lib/db.js"), import("./lib/collect.js")]);
+  const db = createDatabaseClient(environment());
+  const recovered = await recoverRunningRuns(db, environment());
+  const started = await startCollection(db, environment(), "cron");
+  // Tag what was just ingested; a large backlog continues in /api/enrich.
+  const enriched = await enrichBatch(0, requestStarted);
   return { recovered, started, enriched };
+}
+
+/** Continuation hop: accept at once, tag in the background. */
+function continueEnrich(request, response) {
+  requireCronSecret(request);
+  const hop = Number(request.headers?.["x-enrich-hop"]);
+  if (!Number.isInteger(hop) || hop < 1)
+    throw new HttpError(400, "Missing or invalid x-enrich-hop");
+  const idle = Math.max(0, Number(request.headers?.["x-enrich-idle"]) || 0);
+  const requestStarted = Date.now();
+  waitUntil(
+    // After a rate limit, give the provider time to recover before trying again.
+    new Promise((resolve) => setTimeout(resolve, idle ? IDLE_WAIT_MS : 0))
+      .then(() => enrichBatch(hop, requestStarted, idle))
+      .then((result) =>
+        console.log(`Enrich hop ${hop}:`, JSON.stringify(result)),
+      )
+      .catch((error) => console.error(`Enrich hop ${hop} failed:`, error)),
+  );
+  sendJson(response, 202, { accepted: true, hop });
 }
 
 const routes = {
@@ -209,6 +266,10 @@ export default async function handler(request, response) {
   const pathname = forwardedPath ? `/api/${forwardedPath}` : url.pathname;
 
   try {
+    if (pathname === "/api/enrich") {
+      continueEnrich(request, response);
+      return;
+    }
     if (pathname === "/api/collect") {
       sendJson(response, 200, await collect(request));
       return;

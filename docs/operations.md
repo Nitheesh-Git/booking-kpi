@@ -4,7 +4,7 @@ All commands run from the repository root with `.env` filled in.
 
 ## Daily
 
-Nothing to do. The Vercel cron calls `/api/collect` at 19:00 UTC (5 or 6 am Sydney). It ingests the previous day's runs, starts new ones and AI-tags up to 25 reviews. Check the **Data health** tab: every property should show "OK".
+Nothing to do. The Vercel cron calls `/api/collect` at 19:00 UTC (5 or 6 am Sydney). It ingests the previous day's runs, starts new ones and AI-tags every new review (large backlogs continue through `/api/enrich` in batches of about 25 until done). Check the **Data health** tab: every property should show "OK".
 
 ## Common tasks
 
@@ -13,7 +13,7 @@ Nothing to do. The Vercel cron calls `/api/collect` at 19:00 UTC (5 or 6 am Sydn
 | Collect now, from a laptop | `npm run collect` |
 | One-off 12-month backfill | `APIFY_SINCE=2025-10-10 APIFY_MAX_REVIEWS=1500 npm run collect` |
 | Re-ingest a finished Apify run | `npm run ingest-run -- <apifyRunId>` |
-| Tag every pending review | `npm run enrich` |
+| Tag every pending review | Automatic after each collect; `npm run enrich` from a laptop also works |
 | Load an export by hand | `npm run import -- file.csv --property potts-point [--scale 10\|5]` |
 | Rebuild a database from the repo | Apply the files in `supabase/migrations/` in order, then `npm run seed` |
 | Refresh the committed sample | `npm run export-sample` |
@@ -28,7 +28,7 @@ Nothing to do. The Vercel cron calls `/api/collect` at 19:00 UTC (5 or 6 am Sydn
 | "All N reviews score between X and Y" | Actor returned a filtered slice | As above, then re-collect |
 | Run "Failed: Apify run finished as FAILED" | Actor error or block | Open the run on Apify; retry tomorrow; use `npm run import` if it persists |
 | Run "Partial: N of M rows rejected" | Page or actor output changed | `npm run inspect -- rejected_items` to see reasons; update `lib/normalize.js` |
-| Many reviews "waiting" for analysis | AI rate limits or keys down | `npm run enrich`; check `GROQ_API_KEYS` and `OPENROUTER_API_KEYS` |
+| Many reviews "waiting" for analysis | AI rate limits or keys down | The hand-off stops when a batch makes no progress. Check `GROQ_API_KEYS` and `OPENROUTER_API_KEYS`, then click Run (or `npm run enrich`) |
 | Pill says "Data unavailable" | Database unreachable or keys wrong | Check Supabase status and Vercel environment variables |
 
 ## Rotating keys
@@ -37,4 +37,4 @@ Update the value in Vercel project settings and in your local `.env`, then redep
 
 ## Running collection now, without a laptop
 
-Vercel dashboard, project `booking-kpi`, Settings, Cron Jobs, `/api/collect`, **Run**. The first click starts the actor runs. Click **Run** again 10 to 15 minutes later: that click stores the finished runs' reviews (it will not start duplicate runs) and AI-tags up to 25 of them. Remaining tags are added by later daily runs or `npm run enrich`.
+Vercel dashboard, project `booking-kpi`, Settings, Cron Jobs, `/api/collect`, **Run**. The first click starts the actor runs. Click **Run** again 10 to 15 minutes later: that click stores the finished runs' reviews (it will not start duplicate runs) and starts AI tagging, which continues on its own until every review is tagged (about 25 a minute). Progress shows on the Data health tab.

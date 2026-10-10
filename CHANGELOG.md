@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- AI tagging clears any backlog on its own: after the cron's batch, `/api/enrich` keeps handing on in batches of about 25 until no review is pending, waiting out per-minute rate limits. No laptop step after a large collection.
+
 ## 0.2.0, 2026-10-10
 
 ### Added

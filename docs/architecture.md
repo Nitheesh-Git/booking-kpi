@@ -17,7 +17,7 @@
 1. Vercel cron calls `GET /api/collect` with `Authorization: Bearer $CRON_SECRET`.
 2. The handler ingests every `scrape_runs` row still `running` (the runs started by the previous cron). Each is fetched from Apify, normalized, validated, deduplicated and upserted. Failures are written on the run row.
 3. It then starts one Apify run per property and returns immediately, staying inside the function time limit.
-4. `npm run enrich` tags new reviews. It can run any time; untagged reviews show "Topics not analysed yet".
+4. The cron tags new reviews, handing large backlogs to `/api/enrich` until none are left (`lib/continue-enrich.js`). `npm run enrich` does the same from a laptop. Either can run any time; untagged reviews show "Topics not analysed yet".
 
 Polling on the next cron replaces the planned Apify webhook (see decisions). It has no public-URL or webhook-secret setup and recovers missed runs by design, at the cost of up to a day of lag.
 

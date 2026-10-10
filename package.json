@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
+    "@vercel/functions": "^3.9.11",
     "apify-client": "^2.25.0",
     "csv-parse": "^7.0.3",
     "zod": "^4.6.5"
