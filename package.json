@@ -20,7 +20,8 @@
     "export-sample": "node scripts/export-sample.js",
     "inspect": "node scripts/inspect-raw.js",
     "eval": "node scripts/eval.js",
-    "scan": "node scripts/scan.js"
+    "scan": "node scripts/scan.js",
+    "snapshot": "node scripts/snapshot.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
