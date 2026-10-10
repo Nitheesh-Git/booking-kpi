@@ -55,3 +55,11 @@ Done: Completed 100% review enrichment across all 375 reviews (348 enriched, 27 
 Next: Deploy updated application to Vercel and verify production endpoints and UI.
 
 Blockers: None.
+
+## 2026-10-10, review against the brief and dashboard rebuild
+
+Done: Audited the code against the brief. Fixed: dashboard had no current-week rating, no week-on-week comparison, no property breakdown, no positive and negative trend, no insight sentences, and the date filter did not apply to the feed; weeks were bucketed in UTC instead of Sydney time; Supabase reads could silently stop at 1,000 rows; review text was injected into the page unescaped; a failing API test; failed or empty Apify runs were left as "running". Rebuilt the dashboard (Overview, Reviews, Data health), added the daily cron endpoint with fail-closed auth, the AI evidence check, a secret scanner, README, architecture and methodology docs. 53 tests and lint pass.
+
+Next: Export real data to `data/sample/reviews.json` with `npm run export-sample`, deploy to Vercel with `CRON_SECRET` set, and build the hand-labelled evaluation set.
+
+Blockers: The golden evaluation set needs human labelling.
