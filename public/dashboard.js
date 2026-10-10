@@ -823,11 +823,11 @@ function renderHealth() {
     })
     .join("");
   const runs = h.runs?.length
-    ? `<div class="table-wrap"><table><thead><tr><th>Started</th><th>Trigger</th><th>Result</th><th class="r">Fetched</th><th class="r">New</th><th class="r">Updated</th><th class="r">Unchanged</th><th class="r">Rejected</th><th>Note</th></tr></thead><tbody>
+    ? `<div class="table-wrap"><table><thead><tr><th>Started</th><th>Property and source</th><th>Result</th><th class="r">Fetched</th><th class="r">New</th><th class="r">Updated</th><th class="r">Unchanged</th><th class="r">Rejected</th><th>Note</th></tr></thead><tbody>
       ${h.runs
         .map((r) => {
           const [cls, word] = runStatus[r.status] ?? ["muted", r.status];
-          return `<tr><td>${esc(relativeTime(r.started_at))}</td><td>${esc(r.trigger)}</td><td><span class="pill ${cls}"><span class="pill-dot"></span>${esc(word)}</span></td>
+          return `<tr><td>${esc(relativeTime(r.started_at))}</td><td>${esc(state.config.properties.find((p) => p.id === r.property_id)?.name ?? "All")}<div class="prop-sub">${esc(r.actor ? r.actor.split("/")[0] : r.trigger)}</div></td><td><span class="pill ${cls}"><span class="pill-dot"></span>${esc(word)}</span></td>
             <td class="r num">${r.items_fetched}</td><td class="r num">${r.created}</td><td class="r num">${r.updated}</td><td class="r num">${r.unchanged}</td><td class="r num">${r.rejected}</td>
             <td class="muted" style="max-width:280px">${esc(r.error ?? "")}</td></tr>`;
         })
@@ -853,7 +853,7 @@ function renderHealth() {
         <tbody>${rows}</tbody></table></div></div>
     </section>
     <section class="card">
-      <div class="card-head"><div><h2 class="card-title">Recent collection runs</h2><p class="card-sub">One run per property per day. Duplicates are recognised and skipped.</p></div></div>
+      <div class="card-head"><div><h2 class="card-title">Recent collection runs</h2><p class="card-sub">One run per property per day. If an actor fails or returns only old reviews, the next one is tried. Duplicates are recognised and skipped.</p></div></div>
       <div class="card-body" style="padding:12px 0 0">${runs}</div>
     </section>`;
 }

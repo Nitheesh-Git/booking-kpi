@@ -101,7 +101,8 @@ Booking.com has no public review API, so collection uses a third-party Apify act
 
 - **Fields kept**: rating (10-point scale), title, liked text, disliked text, publication date, stay date, country, traveller type, room, nights, the property's reply, review link. Reviewer names are dropped in `lib/normalize.js` and never stored.
 - **No duplicates**: each review gets a key, Booking's review id from the review link when present, otherwise a hash of property, date and text. The database enforces one row per property and key. Re-collecting the same review only updates "last seen"; an edited review or a new reply is detected by a content hash and updated.
-- **New reviews**: each run asks the actor for up to 100 reviews per property (`APIFY_MAX_REVIEWS`). Anything already stored is recognised and skipped. The actor must be set to sort newest first; see Known limitations.
+- **Three actors, in order**: `apt_marble`, then `omkar-cloud`, then `scrapeunblocker`, from different vendors. A property moves to the next actor when one will not start, fails, returns nothing, returns only old reviews or returns scores on the wrong scale. Each actor's input is built from its own published schema.
+- **New reviews**: each run asks for reviews newest first, published since the newest stored review minus 14 days. Anything already stored is recognised and skipped, including the same review collected by a different actor.
 - **Failures**: bounded retries with backoff on network errors; a fallback actor if the primary one cannot start; a failed, empty or mostly rejected run is recorded as `failed` or `degraded` and existing data is never deleted or overwritten; runs left `running` are picked up on the next collection; invalid rows are rejected with a reason and logged, without stopping the run.
 - **Fallback**: `npm run import` loads a CSV or JSON export through the same validation path.
 
@@ -141,14 +142,15 @@ An AI model (Groq, with OpenRouter as fallback) reads each review's title, liked
 | Variable | Needed for |
 |---|---|
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Live data. Server-side only |
-| `APIFY_API_TOKEN`, `APIFY_ACTOR_ID` | Collection. Comma-separated actor IDs give a fallback order |
+| `APIFY_API_TOKEN`, `APIFY_ACTOR_ID` | Collection. Actor IDs in fallback order: `apt_marble/booking-reviews-scraper,omkar-cloud/booking-reviews-scraper,scrapeunblocker/booking-reviews-scraper` |
 | `GROQ_API_KEYS`, `OPENROUTER_API_KEYS` | AI topic tagging |
 | `CRON_SECRET` | Enables `GET /api/collect`. Unset means the endpoint returns 503 |
-| `APIFY_MAX_REVIEWS` | Reviews requested per property per run (default 100). Raise it for a one-off 12-month backfill |
+| `APIFY_MAX_REVIEWS` | Reviews requested per property per run (default 300) |
+| `APIFY_SINCE` | Forces the start date (YYYY-MM-DD) for a one-off backfill; normally the newest stored review minus 14 days |
 | `APIFY_INPUT_OVERRIDES` | JSON merged into the actor input, for example the actor's newest-first sort option |
 | `SAMPLE_DATA_PATH` | Optional alternative data file when Supabase is not configured |
 
-Database setup: create a Supabase project and run `supabase/migrations/0001_init.sql`.
+Database setup: create a Supabase project and run the files in `supabase/migrations/` in order.
 
 ## Deploying
 
@@ -157,7 +159,7 @@ Vercel only: static files from `public/`, one function (`api/index.js`, region `
 ## Known limitations
 
 - **Third-party collector.** Collection depends on an Apify actor that can break when Booking.com changes its pages or blocks traffic. Drift shows up as `degraded` runs on the Data health tab; the CSV and JSON importer is the manual fallback. Automated collection may be restricted by Booking.com's terms; only public data is read, at low volume.
-- **The actor does not return the newest reviews (VERIFIED problem, open).** The stored data shows it: each property has about 100 reviews spread over up to three years, and the newest stored review at Potts Point is from 26 July 2026 and at Darling Harbour from 31 August 2026. So "this week" is close to empty for most properties until the actor is told to sort newest first. The sort option's exact input name has to be read from the actor's Apify page and set in `APIFY_INPUT_OVERRIDES`. Runs that return nothing from the last 21 days are now marked "Partial" on the Data health tab, so this can no longer go unnoticed.
+- **The first actor did not return the newest reviews (VERIFIED; collector replaced, re-collection pending).** The stored data shows it: each property has about 100 reviews spread over up to three years, and the newest stored review at Potts Point is from 26 July 2026 and at Darling Harbour from 31 August 2026. So "this week" is close to empty for most properties until the actor is told to sort newest first. The sort option's exact input name has to be read from the actor's Apify page and set in `APIFY_INPUT_OVERRIDES`. Runs that return nothing from the last 21 days are now marked "Partial" on the Data health tab, so this can no longer go unnoticed.
 - **Collection lag.** The cron starts runs one day and ingests them the next, so the dashboard is up to about a day behind Booking.com.
 - **AI tagging is not perfect.** Sarcasm, mixed sentences and very short reviews are hard. The evaluation tooling is built (`npm run label-template`, `npm run eval`), but the 100 hand labels have not been done yet, so precision and recall are not measured.
 - **Low volumes.** Each property gets only a handful of reviews a week, so weekly averages move a lot. The dashboard flags small samples instead of hiding them.

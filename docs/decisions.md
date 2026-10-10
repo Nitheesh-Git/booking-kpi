@@ -63,3 +63,13 @@ The fallback returned a usable nested response with 75 reviews even though its i
 **Rejected because:** Fetching, not parsing, is the hard part. Booking.com blocks automated requests from cloud servers and loads reviews with JavaScript, which Vercel functions cannot run; an LLM does not solve either. A review page is 100 to 500 KB of HTML, tens of thousands of tokens, so it would exhaust key limits quickly. A model reading HTML can misread or invent scores and dates, which works against the reliability the task values most. It would also reverse the "no own scraping" decision and add terms-of-service risk.
 
 **Instead:** Configure two Apify actors from different vendors as primary and fallback (`APIFY_ACTOR_ID`, comma-separated), keep the CSV and JSON importer as the manual fallback, and make AI key failover cover every failure type, not only rate limits.
+
+## 2026-10-10: Three-actor fallback chain
+
+**Decision:** Replace the original actor with `apt_marble` (primary), `omkar-cloud` (fallback) and `scrapeunblocker` (last resort), from three vendors.
+
+**Evidence:** The original actor returned 100 reviews per property spread over two to three years with only three adjacent scores, while Booking.com lists 2,300 to 4,300 reviews per property and the counts keep rising. Prices and inputs come from Apify listings and are confirmed at run time, not assumed.
+
+**How:** Input is mapped from each actor's published input schema (no guessed sort values); runs are incremental from the newest stored review minus 14 days; a property falls through to the next actor on start failure, failed run, empty output, stale output or a 1 to 5 looking scale; reviews are matched across actors by Booking's own id or by content.
+
+**Trade-off:** More moving parts than one actor. In exchange, one vendor breaking or being blocked no longer stops collection, and a misbehaving actor is caught and skipped automatically.

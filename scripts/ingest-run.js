@@ -12,4 +12,4 @@ const { data: run, error } = await database
   .eq("apify_run_id", apifyRunId)
   .single();
 if (error) throw error;
-console.log(await ingestActorRun(database, environment, run.id, apifyRunId));
+console.log(JSON.stringify(await ingestActorRun(database, environment, run.id, apifyRunId), null, 2));

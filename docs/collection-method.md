@@ -10,12 +10,21 @@ Booking.com does run an official Guest Review API for connectivity partners. If 
 
 ## Sources
 
-| Actor | Role | Scores | Notes |
-|---|---|---|---|
-| Booking.com Reviews (Apify, about USD 1.5 per 1,000 reviews) | Primary | 10-point, exact | VERIFIED on a 5-review probe, 2026-10-10. Returns score, title, liked and disliked text, publication date, stay dates, country, traveller type, room, nights, reply and a review link with Booking's review id |
-| Booking Reviews Scraper (Apify) | Fallback, used only if the primary fails to start | 1 to 5 | VERIFIED probe returned 75 reviews when 5 were requested. Scores are doubled and marked "rounded" |
+Three Apify actors from different vendors, tried in order (`APIFY_ACTOR_ID`). Prices are listing figures, 2026-10-10:
 
-Both IDs are set in `APIFY_ACTOR_ID` (comma-separated, primary first).
+| Order | Actor | Price per 1,000 | Why |
+|---|---|---|---|
+| 1 | `apt_marble/booking-reviews-scraper` | from USD 0.30 | Newest-first sort and a "since" date that stops the run early. New, unrated |
+| 2 | `omkar-cloud/booking-reviews-scraper` | USD 1.00 | Established publisher, newest sort and a cutoff date |
+| 3 | `scrapeunblocker/booking-reviews-scraper` | USD 0.40 | Last resort: only the newest 15 reviews per language, fine for daily top-ups, not for backfill |
+
+At about 2,500 to 3,000 reviews for a 12-month backfill and a few hundred a month after that, cost is a few dollars at most; reliability decided the order.
+
+**How input is built (`lib/actors.js`).** The actors' input names come from their listings and are UNTESTED here, so before each run the collector downloads the actor's published input schema from Apify and maps four things by field name and allowed values: hotel URL, review cap, newest-first sort and since-date. It never guesses a sort value that is not in the schema's list. If the schema cannot be read, a built-in profile per actor is used. `APIFY_INPUT_OVERRIDES` can force any field, for all actors or per actor.
+
+**Actor fallback.** A property moves to the next actor when the current one will not start, its run fails, returns no rated rows, returns only reviews older than 21 days, or returns scores that look like a 1 to 5 scale. Each run row records its actor and property, so the right scale is applied and the Data health tab shows which actor ran.
+
+The previous actor (Booking.com Reviews, used for the first collection) was dropped: see "New reviews" below.
 
 ## What is kept
 
@@ -25,7 +34,12 @@ The rating scale is set by the source, never guessed from the number (see "Incid
 
 ## Duplicates
 
-Each review gets a `dedupe_key`: Booking's own review id from the review link when present (all primary-actor rows have one), otherwise a hash of property, publication date and text. The database enforces one row per property and key.
+Each review gets a `dedupe_key`: Booking's own review id from the review link when present (it wins over any actor-specific id, so different actors agree), otherwise the actor's review id, otherwise a hash of property, publication date and text.
+
+Two more guards for multiple actors:
+
+- **Same review, different id:** before inserting, a review is compared with stored reviews of the same property by day (plus or minus one, for time zones), score and text. A match is treated as already stored.
+- **Id reused for different reviews** (for example a hotel id in an id field): detected per batch, and the batch falls back to content-based keys so reviews are never merged. The database enforces one row per property and key.
 
 - Same review again: only `last_seen_at` moves. Counted as "unchanged".
 - Same review with changed text, score or a new reply: detected by `content_hash`, row updated. Counted as "updated".
@@ -33,9 +47,9 @@ Each review gets a `dedupe_key`: Booking's own review id from the review link wh
 
 ## New reviews
 
-Each daily run asks the actor for up to `APIFY_MAX_REVIEWS` (default 100) reviews per property; anything already stored is recognised and skipped.
+Each run asks for reviews published since the newest stored review minus 14 days (or one year back for an empty property), newest first, up to `APIFY_MAX_REVIEWS` (default 300). For a one-off backfill set `APIFY_SINCE`, for example `APIFY_SINCE=2025-10-10 APIFY_MAX_REVIEWS=1500 npm run collect`.
 
-**VERIFIED problem, open:** the first collection did not return the newest reviews. Three properties got 100 reviews spread over two to three years, with only three adjacent scores each (for example 6, 7 and 8), and nothing from recent weeks. The primary actor has a sort option, but the collector never sent it. The exact input name is UNKNOWN from this environment because the Apify site was unreachable. Fix: read it from the actor's input schema on Apify and set it, for example `APIFY_INPUT_OVERRIDES={"sortBy":"newest"}`, then rerun with `APIFY_MAX_REVIEWS=400` for a 12-month backfill.
+**VERIFIED problem with the first actor, fixed by switching actors:** the first collection did not return the newest reviews. Three properties got 100 reviews spread over two to three years, with only three adjacent scores each (for example 6, 7 and 8), and nothing from recent weeks. Booking.com shows 2,300 to 4,300 reviews per property and the counts keep rising, so the reviews exist; the actor run simply did not fetch them. The collector now uses actors with a verified-in-listing newest-first sort and a since-date, maps them from each actor's own schema, and falls back to the next actor on stale output.
 
 Until then, the problem is caught in two places:
 

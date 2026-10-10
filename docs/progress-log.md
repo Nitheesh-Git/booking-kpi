@@ -95,3 +95,11 @@ Done: The production homepage returned {"error":"Not found"} because the Vercel 
 Next: Merge this branch into main, fix the actor's newest-first sort and re-collect.
 
 Blockers: None.
+
+## 2026-10-10, actor fallback chain
+
+Done: Confirmed from public data that the missing reviews exist on Booking.com (2,300 to 4,300 per property, counts rising), so the first actor was at fault. Replaced it with three actors from different vendors in fallback order: apt_marble, omkar-cloud, scrapeunblocker. Input is built from each actor's published schema; runs are incremental from the newest stored review; a property falls through to the next actor on failure, empty or stale output, or a wrong-looking scale; reviews are matched across actors so none are stored twice. Added migration 0002 (run actor and property). 94 tests pass.
+
+Next: Run the 12-month backfill with the new actors and confirm the Data health tab shows all four properties as OK.
+
+Blockers: This environment cannot reach Apify, so the first live run happens on the daily cron or from a laptop.

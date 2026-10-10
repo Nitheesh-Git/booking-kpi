@@ -85,26 +85,8 @@ describe("collection recency check", () => {
     expect(recencyProblem([{ reviewDate: "2026-07-26T00:00:00Z" }, { reviewDate: "2024-01-01T00:00:00Z" }], now)).toMatch(/76 days old/);
   });
 
-  it("merges actor input overrides and a larger backfill cap", async () => {
-    const { actorInput } = await import("../lib/apify.js");
-    const input = actorInput({ bookingUrl: "https://example.test/h.html" }, false, {
-      APIFY_MAX_REVIEWS: "400",
-      APIFY_INPUT_OVERRIDES: '{"sortBy":"newest"}',
-    });
-    expect(input).toMatchObject({ maxReviews: 400, sortBy: "newest", startUrls: ["https://example.test/h.html"] });
-    expect(actorInput({ bookingUrl: "x" }, false, { APIFY_INPUT_OVERRIDES: "not json" }).maxReviews).toBe(100);
-  });
 });
 
-describe("actor detection", () => {
-  it("identifies the fallback actor from the run input, not the credential", async () => {
-    const { ranOnFallback } = await import("../lib/collect.js");
-    const { actorInput } = await import("../lib/apify.js");
-    const property = { bookingUrl: "https://example.test/h.html" };
-    expect(ranOnFallback(actorInput(property, true))).toBe(true);
-    expect(ranOnFallback(actorInput(property, false))).toBe(false);
-  });
-});
 
 describe("prompt building", () => {
   it("inserts review text literally, even with $ patterns and placeholders", async () => {
