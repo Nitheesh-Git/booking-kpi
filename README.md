@@ -9,6 +9,8 @@ Collects public Booking.com guest reviews for four Azzurro Hotels properties in 
 | Central Sydney | [venus-surry-hills](https://www.booking.com/hotel/au/venus-surry-hills.html) |
 | Darling Harbour | [chateau-de-venus](https://www.booking.com/hotel/au/chateau-de-venus.html) |
 
+**Live demo:** https://booking-kpi.vercel.app (reads the live database; served from Singapore, next to it).
+
 ## Quick start
 
 Requires Node 20 or newer.
@@ -150,7 +152,7 @@ Database setup: create a Supabase project and run `supabase/migrations/0001_init
 
 ## Deploying
 
-Vercel only: static files from `public/`, one function (`api/index.js`) and a daily cron (`vercel.json`). Add the variables above in the Vercel project settings, then `vercel deploy --prod`. Make sure Vercel Deployment Protection is off for the public demo.
+Vercel only: static files from `public/`, one function (`api/index.js`, region `sin1`, next to the Supabase database) and a daily cron (`vercel.json`). Environment variables are set for Production only, so preview deployments fall back to the committed sample. Add the variables above in the Vercel project settings, then `vercel deploy --prod`. Make sure Vercel Deployment Protection is off for the public demo.
 
 ## Known limitations
 

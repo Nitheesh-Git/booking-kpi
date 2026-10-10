@@ -79,3 +79,11 @@ Done: Exported the real sample (375 reviews, 1,340 topic tags) and ran the dashb
 Next: Set the actor's newest-first sort, backfill 12 months, deploy, hand-label 100 reviews.
 
 Blockers: This environment cannot reach Apify, Groq or Vercel directly, and the Vercel connector lacks access to the project's team scope.
+
+## 2026-10-10, deployed
+
+Done: Deployed to production at https://booking-kpi.vercel.app. Fixed a deploy-only bug (the function could not find the sample file because Vercel runs it from another directory). Moved the function to Singapore, next to the database. Verified on production: health reads Supabase, figures match an independent recalculation, the collection endpoint returns 401 without the secret. The daily cron is now active.
+
+Next: Set the actor's newest-first sort and re-collect; merge this branch into main so the production branch matches.
+
+Blockers: None for deployment.
