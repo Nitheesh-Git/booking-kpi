@@ -305,3 +305,50 @@ describe("re-collecting never blanks stored fields", () => {
     expect(db.tables.reviews[0]).toMatchObject({ reply_text: "Thanks!", reviewer_country: "Australia" });
   });
 });
+
+describe("omkar-cloud style output", () => {
+  it("reads nested guest country, stay details and an object reply, never the guest name", () => {
+    const r = normalizeReview(
+      {
+        id: "om-1",
+        score: 6,
+        positive: "Location",
+        negative: "Noisy",
+        date: "2026-10-01",
+        owner_reply: { text: "Thanks for staying", date: "2026-10-02" },
+        guest: { name: "Private Person", country: "Germany", type: "Solo traveller" },
+        stay: { room: "Female Pod", nights: 3, date: "September 2026" },
+      },
+      "potts-point",
+    );
+    expect(r).toMatchObject({
+      replyText: "Thanks for staying",
+      reviewerCountry: "Germany",
+      travellerType: "Solo traveller",
+      roomName: "Female Pod",
+      nights: 3,
+      stayDate: "2026-09-01",
+    });
+    expect(JSON.stringify(r)).not.toMatch(/Private Person/);
+  });
+
+  it("reads a one-line stay string", async () => {
+    const { parseStayText } = await import("../lib/normalize.js");
+    expect(parseStayText("Mixed Dorm Pod · 2 nights · October 2026 · Group")).toEqual({
+      room: "Mixed Dorm Pod",
+      nights: 2,
+      stay: "October 2026",
+      traveller: "Group",
+    });
+    const r = normalizeReview({ score: 7, stay: "Twin Room · 1 night · August 2026", date: "2026-09-01" }, "potts-point");
+    expect(r).toMatchObject({ roomName: "Twin Room", nights: 1, stayDate: "2026-08-01" });
+  });
+
+  it("lists nested field names in run notes without values", async () => {
+    const { fieldCoverage } = await import("../lib/collect.js");
+    const note = fieldCoverage([{ guest: { name: "Secret Name", country: "AU" }, stay: { room: "Pod" } }], []);
+    expect(note).toMatch(/guest\.country/);
+    expect(note).toMatch(/stay\.room/);
+    expect(note).not.toMatch(/Secret Name/);
+  });
+});

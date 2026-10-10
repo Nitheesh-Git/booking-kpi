@@ -103,3 +103,11 @@ Done: Confirmed from public data that the missing reviews exist on Booking.com (
 Next: Run the 12-month backfill with the new actors and confirm the Data health tab shows all four properties as OK.
 
 Blockers: This environment cannot reach Apify, so the first live run happens on the daily cron or from a laptop.
+
+## 2026-10-10, first runs with the new actors
+
+Done: Triggered collection from the Vercel dashboard. apt_marble worked for Olympic Paddington (75 reviews, all already stored) and failed for the other three; the chain fell back to omkar-cloud automatically, which back-filled 12 months: Potts Point +287, Central Sydney +241, Darling Harbour +635 reviews, newest now 6 to 10 October, full 1 to 10 score range. Caught and fixed an update that blanked fields the new actor does not send (data restored and verified by checksum). Mapped omkar-cloud's nested reply, guest country and stay fields.
+
+Next: Re-read the stored Apify results with the new mapping to fill replies and stay details (no new scraping cost), then tag the new reviews with AI.
+
+Blockers: About 1,100 new reviews need AI tagging; the daily job tags 25 per run, so a one-off `npm run enrich` is needed.
