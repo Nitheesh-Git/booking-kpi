@@ -161,6 +161,9 @@ function requireCronSecret(request) {
   if (!auth.ok) throw new HttpError(auth.status, auth.error);
 }
 
+/** Function limit is 300 s (vercel.json); keep 30 s for the last LLM call and the hand-off. */
+const TAG_BUDGET_MS = 270_000;
+
 /**
  * Tag one time-boxed batch of pending reviews, then hand the rest to the next
  * hop if there is more to do (see lib/continue-enrich.js).
@@ -181,21 +184,33 @@ async function enrichBatch(hop, requestStarted, idle = 0) {
     import("./lib/llm.js"),
     import("./lib/continue-enrich.js"),
   ]);
-  let enriched;
+  const db = createDatabaseClient(environment());
+  const keys = resolvedLlmKeys(environment());
+  const enriched = { done: 0, failed: 0, skipped: 0, droppedTags: 0, stoppedEarly: true };
   try {
-    enriched = await enrichPending(
-      createDatabaseClient(environment()),
-      resolvedLlmKeys(environment()),
-      {
-        maxReviews: 40,
-        // Function limit is 60 s (vercel.json); keep 15 s for the last LLM call and the hand-off.
-        deadlineMs: Math.max(0, 45_000 - (Date.now() - requestStarted)),
+    // Keep tagging until the time budget is spent, waiting out rate limits
+    // in place: Vercel refuses long chains of self-calls, so each call
+    // should do as much as it can.
+    for (;;) {
+      const left = TAG_BUDGET_MS - (Date.now() - requestStarted);
+      const pass = await enrichPending(db, keys, {
+        deadlineMs: Math.max(0, left),
         delayMs: 200,
-        backoffMs: 2_000,
-      },
-    );
+        backoffMs: 15_000,
+      });
+      for (const k of ["done", "failed", "skipped", "droppedTags"]) enriched[k] += pass[k] ?? 0;
+      if (pass.rateLimited) enriched.rateLimited = true;
+      if (!pass.stoppedEarly) {
+        enriched.stoppedEarly = false;
+        break;
+      }
+      if (!pass.rateLimited || TAG_BUDGET_MS - (Date.now() - requestStarted) < 20_000) {
+        enriched.outOfTime = Boolean(pass.outOfTime || pass.rateLimited);
+        break;
+      }
+    }
   } catch (error) {
-    enriched = { error: error.message };
+    enriched.error = error.message;
   }
   const decision = shouldContinue(enriched, hop, idle);
   const next = decision.next

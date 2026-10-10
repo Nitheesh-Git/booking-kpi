@@ -4,7 +4,7 @@ All commands run from the repository root with `.env` filled in.
 
 ## Daily
 
-Nothing to do. The Vercel cron calls `/api/collect` at 19:00 UTC (5 or 6 am Sydney). It ingests the previous day's runs, starts new ones and AI-tags every new review (large backlogs continue through `/api/enrich` in batches of about 25 until done). Check the **Data health** tab: every property should show "OK".
+Nothing to do. The Vercel cron calls `/api/collect` at 19:00 UTC (5 or 6 am Sydney). It ingests the previous day's runs, starts new ones and AI-tags every new review (up to about 18 minutes of tagging per cron through `/api/enrich`; a large backlog clears over a few days). Check the **Data health** tab: every property should show "OK".
 
 ## Common tasks
 
@@ -37,4 +37,4 @@ Update the value in Vercel project settings and in your local `.env`, then redep
 
 ## Running collection now, without a laptop
 
-Vercel dashboard, project `booking-kpi`, Settings, Cron Jobs, `/api/collect`, **Run**. The first click starts the actor runs. Click **Run** again 10 to 15 minutes later: that click stores the finished runs' reviews (it will not start duplicate runs) and starts AI tagging, which continues on its own until every review is tagged (about 25 a minute). Progress shows on the Data health tab.
+Vercel dashboard, project `booking-kpi`, Settings, Cron Jobs, `/api/collect`, **Run**. The first click starts the actor runs. Click **Run** again 10 to 15 minutes later: that click stores the finished runs' reviews (it will not start duplicate runs) and starts AI tagging, which runs for up to about 18 minutes per click (roughly 10 to 25 reviews a minute, limited by the AI providers). Each extra click adds another 18 minutes. Progress shows on the Data health tab.

@@ -26,10 +26,10 @@ describe("shouldContinue", () => {
   it("waits out rate limits a few times, then gives up until the next cron", () => {
     const limited = { done: 0, stoppedEarly: true, rateLimited: true };
     expect(shouldContinue(limited, 2, 0)).toEqual({ next: true, idle: 1 });
-    expect(shouldContinue(limited, 5, MAX_IDLE).next).toBe(false);
+    expect(shouldContinue(limited, 1, MAX_IDLE).next).toBe(false);
     // Progress after a rate limit resets the count.
     expect(
-      shouldContinue({ done: 5, stoppedEarly: true, rateLimited: true }, 6, 2),
+      shouldContinue({ done: 5, stoppedEarly: true, rateLimited: true }, 1, 2),
     ).toEqual({ next: true, idle: 0 });
   });
 

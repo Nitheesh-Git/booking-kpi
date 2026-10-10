@@ -41,7 +41,7 @@ npm run eval                          # AI and keyword baseline vs the hand labe
 npm run scan                          # check for key-like strings before pushing
 ```
 
-In production a daily Vercel cron calls `GET /api/collect` (protected by `CRON_SECRET`). Each call ingests the runs started the day before, starts new ones, then AI-tags new reviews. One function call tags about 25; if more are waiting it hands the rest to `GET /api/enrich`, which keeps handing on until none are left, so even a 1,000-review back-fill is tagged within about an hour with no laptop. See [docs/collection-method.md](docs/collection-method.md).
+In production a daily Vercel cron calls `GET /api/collect` (protected by `CRON_SECRET`). Each call ingests the runs started the day before, starts new ones, then AI-tags new reviews. Each call tags for up to 4.5 minutes, waiting out AI rate limits; if more are waiting it hands the rest to `GET /api/enrich`, up to three times (Vercel blocks deeper self-calls). That is about 18 minutes of tagging per day, far more than a normal day's 10 to 30 new reviews. A large back-fill is cleared over a few days, or at once with `npm run enrich`. See [docs/collection-method.md](docs/collection-method.md).
 
 ## What the dashboard shows
 
