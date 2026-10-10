@@ -7,7 +7,14 @@ export default [
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
-      globals: { console: "readonly", process: "readonly", URL: "readonly" },
+      globals: {
+        AbortSignal: "readonly",
+        URL: "readonly",
+        console: "readonly",
+        fetch: "readonly",
+        process: "readonly",
+        setTimeout: "readonly",
+      },
     },
     rules: {
       "no-undef": "error",

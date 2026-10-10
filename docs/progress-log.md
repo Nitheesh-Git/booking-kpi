@@ -39,3 +39,19 @@ Done: Authenticated and linked the Supabase CLI, then applied `0001_init.sql` to
 Next: Build the Apify client, run lifecycle, retry policy, recovery path and four-property backfill.
 
 Blockers: None for P2. The public demo deployment protection remains a later release task.
+
+## 2026-10-10, P2 complete
+
+Done: Implemented Apify client with fallback actor failover, run lifecycle tracking in `scrape_runs`, bounded retries, per-property failure isolation, and completed 4-property backfill with 374 real reviews ingested without rejection.
+
+Next: Build LLM enrichment pipeline (Groq multi-key rotation and OpenRouter fallback), topic tagging, sentiment analysis, and operations KPI calculation.
+
+Blockers: None.
+
+## 2026-10-10, P3 implementation ready
+
+Done: Implemented LLM client (`lib/llm.js`) with Groq 3-key round-robin and OpenRouter fallback; topic tagging and sentiment scoring (`lib/enrich.js`); operations KPI aggregation (`lib/kpi.js`); CLI tools (`scripts/enrich.js`, `scripts/scan.js`, `scripts/eval.js`, `scripts/seed.js`, `scripts/export-sample.js`, `scripts/inspect-raw.js`); 28 passing unit tests and clean linting. Over 300 reviews already enriched in Supabase with verified topic extractions.
+
+Next: Complete remaining review enrichment, build API endpoints and dashboard UI.
+
+Blockers: None.
