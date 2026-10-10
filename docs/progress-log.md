@@ -23,3 +23,19 @@ Done: Deployed and verified the health endpoint on Vercel. Added all configured 
 Next: Build the Supabase schema, normalizer, validator, dedupe key, idempotent ingest path and CSV or JSON import fallback.
 
 Blockers: The production deployment currently has Vercel Authentication protection enabled. It does not block development, but it must be disabled before the final public demo.
+
+## 2026-10-10, P1 implementation ready
+
+Done: Added the Supabase migration, privacy-safe canonical review model, validation, deterministic dedupe and content hashes, idempotent ingestion path, CSV or JSON import command and fixture-based tests. `npm test` and `npm run lint` pass.
+
+Next: Apply the migration to the configured Supabase project, run the fixture import twice and verify that the second import creates no new reviews.
+
+Blockers: The Supabase CLI is not installed and no database connection string or Supabase management access token is configured. The service role key can access data but cannot apply DDL through the REST API.
+
+## 2026-10-10, P1 complete
+
+Done: Authenticated and linked the Supabase CLI, then applied `0001_init.sql` to the configured project. Imported the real five-review fixture twice. The first import created five reviews, and the second created zero, updated zero and marked five unchanged.
+
+Next: Build the Apify client, run lifecycle, retry policy, recovery path and four-property backfill.
+
+Blockers: None for P2. The public demo deployment protection remains a later release task.

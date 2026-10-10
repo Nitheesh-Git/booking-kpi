@@ -1,14 +1,14 @@
-import { createReadStream, existsSync } from 'node:fs';
-import { createServer } from 'node:http';
-import { extname, join, normalize } from 'node:path';
-import handler from './app.js';
+import { createReadStream, existsSync } from "node:fs";
+import { createServer } from "node:http";
+import { extname, join, normalize } from "node:path";
+import handler from "./app.js";
 
 const port = Number(process.env.PORT ?? 3000);
-const publicDirectory = join(process.cwd(), 'public');
+const publicDirectory = join(process.cwd(), "public");
 const contentTypes = {
-  '.css': 'text/css; charset=utf-8',
-  '.html': 'text/html; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8'
+  ".css": "text/css; charset=utf-8",
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
 };
 
 /**
@@ -17,23 +17,24 @@ const contentTypes = {
  * @returns {void}
  */
 function serve(request, response) {
-  const url = new URL(request.url ?? '/', 'http://localhost');
+  const url = new URL(request.url ?? "/", "http://localhost");
 
-  if (url.pathname.startsWith('/api/')) {
+  if (url.pathname.startsWith("/api/")) {
     handler(request, response);
     return;
   }
 
-  const requestedPath = url.pathname === '/' ? '/index.html' : url.pathname;
+  const requestedPath = url.pathname === "/" ? "/index.html" : url.pathname;
   const filePath = normalize(join(publicDirectory, requestedPath));
   if (!filePath.startsWith(publicDirectory) || !existsSync(filePath)) {
-    response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-    response.end('Not found');
+    response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    response.end("Not found");
     return;
   }
 
   response.writeHead(200, {
-    'content-type': contentTypes[extname(filePath)] ?? 'application/octet-stream'
+    "content-type":
+      contentTypes[extname(filePath)] ?? "application/octet-stream",
   });
   createReadStream(filePath).pipe(response);
 }

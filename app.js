@@ -9,28 +9,28 @@
  * @returns {void}
  */
 export default function handler(request, response) {
-  const url = new URL(request.url ?? '/', 'http://localhost');
-  const forwardedPath = url.searchParams.get('path');
+  const url = new URL(request.url ?? "/", "http://localhost");
+  const forwardedPath = url.searchParams.get("path");
   const pathname = forwardedPath ? `/api/${forwardedPath}` : url.pathname;
 
-  if (pathname === '/api/health') {
+  if (pathname === "/api/health") {
     response.writeHead(200, {
-      'content-type': 'application/json; charset=utf-8',
-      'cache-control': 'no-store'
+      "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
     });
     response.end(
       JSON.stringify({
         ok: true,
-        service: 'azzurro-review-insights',
-        phase: 'P0'
-      })
+        service: "azzurro-review-insights",
+        phase: "P0",
+      }),
     );
     return;
   }
 
   response.writeHead(404, {
-    'content-type': 'application/json; charset=utf-8',
-    'cache-control': 'no-store'
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
   });
-  response.end(JSON.stringify({ error: 'Not found' }));
+  response.end(JSON.stringify({ error: "Not found" }));
 }
