@@ -17,5 +17,8 @@
       "path": "/api/collect",
       "schedule": "0 19 * * *"
     }
+  ],
+  "regions": [
+    "sin1"
   ]
 }
