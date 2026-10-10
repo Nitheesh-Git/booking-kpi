@@ -10,6 +10,7 @@ export default [
       globals: {
         AbortSignal: "readonly",
         URL: "readonly",
+        URLSearchParams: "readonly",
         console: "readonly",
         fetch: "readonly",
         process: "readonly",
@@ -19,6 +20,15 @@ export default [
     rules: {
       "no-undef": "error",
       "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+    },
+  },
+  {
+    files: ["public/**/*.js"],
+    languageOptions: {
+      globals: {
+        document: "readonly",
+        window: "readonly",
+      },
     },
   },
 ];

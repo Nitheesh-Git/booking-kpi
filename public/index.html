@@ -3,13 +3,127 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Azzurro Review Insights</title>
+    <title>Azzurro Review Insights | Operations KPI Dashboard</title>
+    <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
-    <main>
-      <h1>Azzurro Review Insights</h1>
-      <p>The collection and dashboard setup is in progress.</p>
-      <p><a href="/api/health">Check service health</a></p>
-    </main>
+    <div class="container">
+      <!-- Header -->
+      <header>
+        <div class="brand">
+          <h1>Azzurro Review Insights</h1>
+          <span class="badge-health" id="healthBadge">Live Phase P3</span>
+        </div>
+        <div class="controls">
+          <select id="propertySelect" aria-label="Select Property">
+            <option value="">Loading properties...</option>
+          </select>
+          <select id="daysSelect" aria-label="Select Window">
+            <option value="30">Last 30 Days</option>
+            <option value="90" selected>Last 90 Days</option>
+            <option value="180">Last 180 Days</option>
+            <option value="365">Last 365 Days</option>
+            <option value="1000">All Time</option>
+          </select>
+        </div>
+      </header>
+
+      <!-- Metric KPI Cards -->
+      <section class="metrics-grid">
+        <!-- Average Rating -->
+        <div class="card">
+          <div class="card-title">Average Rating</div>
+          <div class="card-value">
+            <span id="avgRating">–</span><small>/ 10</small>
+          </div>
+          <div class="card-subtitle" id="totalReviews">Loading...</div>
+          <div class="bar-wrap">
+            <div class="bar-fill bar-accent" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <!-- Sentiment Score -->
+        <div class="card">
+          <div class="card-title">AI Sentiment Score</div>
+          <div class="card-value" id="avgSentiment">–</div>
+          <div class="card-subtitle" id="enrichedReviews">Loading...</div>
+          <div class="bar-wrap">
+            <div class="bar-fill bar-positive" id="sentimentBar" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Positive Reviews -->
+        <div class="card">
+          <div class="card-title">Positive (≥ 8.0)</div>
+          <div class="card-value" id="posPct">–</div>
+          <div class="card-subtitle" id="posCount">–</div>
+          <div class="bar-wrap">
+            <div class="bar-fill bar-positive" id="posBar" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Neutral Reviews -->
+        <div class="card">
+          <div class="card-title">Neutral (6.0 – 7.9)</div>
+          <div class="card-value" id="neuPct">–</div>
+          <div class="card-subtitle" id="neuCount">–</div>
+          <div class="bar-wrap">
+            <div class="bar-fill bar-neutral" id="neuBar" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- Negative Reviews -->
+        <div class="card">
+          <div class="card-title">Negative (< 6.0)</div>
+          <div class="card-value" id="negPct">–</div>
+          <div class="card-subtitle" id="negCount">–</div>
+          <div class="bar-wrap">
+            <div class="bar-fill bar-negative" id="negBar" style="width: 0%"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Main Visualizations Grid -->
+      <div class="content-grid">
+        <!-- Topic Insights Panel -->
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Operations Topic Insights</h2>
+            <small style="color: var(--text-muted)">Click a topic to filter reviews</small>
+          </div>
+          <div class="topic-list" id="topicList">
+            <div class="empty-state">Loading topic insights...</div>
+          </div>
+        </section>
+
+        <!-- Weekly Trend Panel -->
+        <section class="panel">
+          <div class="panel-header">
+            <h2 class="panel-title">Weekly Rating Trend</h2>
+            <small style="color: var(--text-muted)">12-week Sydney timezone</small>
+          </div>
+          <div class="trend-chart" id="trendChart">
+            <div class="empty-state">Loading trend data...</div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Reviews Feed -->
+      <section class="reviews-section">
+        <div class="reviews-header">
+          <h2 class="panel-title">Customer Reviews Feed</h2>
+          <div class="feed-filters">
+            <button class="btn-pill active" data-polarity="">All Ratings</button>
+            <button class="btn-pill" data-polarity="positive">Positive (≥8)</button>
+            <button class="btn-pill" data-polarity="negative">Negative (&lt;6)</button>
+          </div>
+        </div>
+        <div id="reviewsFeed">
+          <div class="empty-state">Loading reviews...</div>
+        </div>
+      </section>
+    </div>
+
+    <script src="/dashboard.js"></script>
   </body>
 </html>
