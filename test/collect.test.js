@@ -19,6 +19,7 @@ function fakeDb() {
       const run = () => {
         if (q.op === "insert") {
           const list = (Array.isArray(q.payload) ? q.payload : [q.payload]).map((p) => ({ id: `id${++seq}`, ...p }));
+          for (const row of list) if (name === "scrape_runs" && !row.started_at) row.started_at = new Date().toISOString();
           rows.push(...list);
           return q.single ? list[0] : list;
         }
@@ -113,7 +114,8 @@ describe("startCollection", () => {
     const running = db.tables.scrape_runs.filter((r) => r.status === "running");
     expect(running[0]).toMatchObject({ actor: "omkar-cloud/booking-reviews-scraper", property_id: "olympic-paddington", cutoff_date: "2025-10-10" });
     expect(db.tables.scrape_runs.filter((r) => r.status === "failed")).toHaveLength(4);
-    expect(api.started[0].input).toMatchObject({ sortBy: "newest", cutoffDate: "2025-10-10" });
+    // First run with the new actors is a 12-month backfill with the larger cap.
+    expect(api.started[0].input).toMatchObject({ sortBy: "newest", cutoffDate: "2025-10-10", maxReviewsPerHotel: 1500 });
   });
 });
 
@@ -237,7 +239,8 @@ describe("cross-actor duplicates", () => {
     expect(db.tables.reviews).toHaveLength(1);
 
     // Another actor: other id, date only, slightly different spacing.
-    const [second] = await startCollection(db, env, "cron", { api });
+    // Seven hours later, past the double-start guard.
+    const [second] = await startCollection(db, env, "cron", { api, now: new Date(Date.now() + 7 * 3_600_000) });
     api.getDatasetItems = async () => [
       { id: "other-777", rating: "4", likedText: "Location", dislikedText: "Dirty room", date: original.reviewDate.slice(0, 10) },
     ];
@@ -252,5 +255,28 @@ describe("cross-actor duplicates", () => {
       "potts-point",
     );
     expect(r.sourceReviewId).toBe("abc123");
+  });
+});
+
+describe("double triggering", () => {
+  it("does not start a second run for a property started in the last 6 hours", async () => {
+    const db = fakeDb();
+    const api = fakeApi();
+    await startCollection(db, env, "manual", { api });
+    const again = await startCollection(db, env, "manual", { api });
+    expect(again.every((r) => r.skipped)).toBe(true);
+    expect(api.started).toHaveLength(4);
+  });
+});
+
+describe("backfill once, then incremental", () => {
+  it("switches to incremental after a successful run for the property", async () => {
+    const db = fakeDb();
+    const api = fakeApi();
+    db.tables.scrape_runs.push({ id: "old", property_id: "potts-point", status: "ingested", started_at: "2026-10-01T00:00:00Z" });
+    db.tables.reviews.push({ id: "r", property_id: "potts-point", review_date: "2026-10-05T00:00:00.000Z" });
+    await startCollection(db, env, "cron", { api, now: new Date("2026-10-10T00:00:00Z") });
+    const potts = api.started.find((s) => s.input.startUrls[0].url.includes("venus-potts-point"));
+    expect(potts.input).toMatchObject({ onlyReviewsSince: "2026-09-21", maxReviewsPerHotel: 300 });
   });
 });

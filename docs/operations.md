@@ -34,3 +34,7 @@ Nothing to do. The Vercel cron calls `/api/collect` at 19:00 UTC (5 or 6 am Sydn
 ## Rotating keys
 
 Update the value in Vercel project settings and in your local `.env`, then redeploy. Several keys per AI provider can be given comma-separated. Never commit `.env`.
+
+## Running collection now, without a laptop
+
+Vercel dashboard, project `booking-kpi`, Settings, Cron Jobs, `/api/collect`, **Run**. The first click starts the actor runs. Click **Run** again 10 to 15 minutes later: that click stores the finished runs' reviews (it will not start duplicate runs) and AI-tags up to 25 of them. Remaining tags are added by later daily runs or `npm run enrich`.
