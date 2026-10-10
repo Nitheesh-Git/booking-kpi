@@ -71,3 +71,11 @@ Done: Found and fixed a rating bug that stored the 46 worst reviews as 8 to 10 o
 Next: Set the actor's newest-first sort option and rerun collection with a larger review cap; export the sample data; deploy; hand-label 100 reviews.
 
 Blockers: This build environment cannot reach Apify, Groq or Vercel, and database reads were blocked by a permission guard after the correction, so collection, export and deploy must be run from a laptop.
+
+## 2026-10-10, deep validation
+
+Done: Exported the real sample (375 reviews, 1,340 topic tags) and ran the dashboard on it. Found three properties' data is a filtered slice (100 reviews over years, only three adjacent scores, nothing recent); added per-property data checks that warn staff on screen. A full code review found 22 issues; fixed the real ones (health status missing failures, wrong rating scale when actors share a token, transient Apify errors losing paid runs, rate limits failing reviews, cron overrunning 60 s, prompt corruption by "$" in reviews, skewed AI evaluation). Seed now rebuilds the database from the sample. Added known-unknowns, operations runbook, changelog and roadmap. 73 tests and lint pass.
+
+Next: Set the actor's newest-first sort, backfill 12 months, deploy, hand-label 100 reviews.
+
+Blockers: This environment cannot reach Apify, Groq or Vercel directly, and the Vercel connector lacks access to the project's team scope.

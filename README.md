@@ -20,7 +20,9 @@ npm test                    # unit tests, no network needed
 npm run dev                 # http://localhost:3000
 ```
 
-Without Supabase credentials the dashboard reads `data/sample/reviews.json` (real collected reviews exported with `npm run export-sample`). With credentials it reads the live database.
+Without Supabase credentials the dashboard reads `data/sample/reviews.json`: 375 real reviews collected from the four Booking.com pages, with their AI topic tags, exported from the database on 10 October 2026. With credentials it reads the live database. To rebuild a database from the repository, apply `supabase/migrations/0001_init.sql` and run `npm run seed`.
+
+> **Data status, read first.** The first collection did not fetch the newest reviews for Potts Point, Central Sydney and Darling Harbour (see Known limitations). Olympic Hotel Paddington's data is current. The dashboard says so on screen: the Data health tab flags each affected property, and the Overview warns that those numbers are incomplete.
 
 ### Collecting reviews
 
@@ -28,6 +30,7 @@ Without Supabase credentials the dashboard reads `data/sample/reviews.json` (rea
 npm run collect                       # start one Apify run per property, wait, ingest
 npm run enrich                        # AI topic tagging for new reviews
 npm run export-sample                 # refresh data/sample/reviews.json from the database
+npm run seed                          # load data/sample into an empty database
 npm run ingest-run -- <apifyRunId>    # re-ingest a finished Apify run
 npm run import -- file.csv --property darling-harbour   # fallback: load an export by hand
 npm run snapshot                      # this week's KPIs and insights in the terminal
@@ -96,7 +99,7 @@ Booking.com has no public review API, so collection uses a third-party Apify act
 
 - **Fields kept**: rating (10-point scale), title, liked text, disliked text, publication date, stay date, country, traveller type, room, nights, the property's reply, review link. Reviewer names are dropped in `lib/normalize.js` and never stored.
 - **No duplicates**: each review gets a key, Booking's review id from the review link when present, otherwise a hash of property, date and text. The database enforces one row per property and key. Re-collecting the same review only updates "last seen"; an edited review or a new reply is detected by a content hash and updated.
-- **New reviews**: each run asks for the newest 100 reviews per property. Anything already stored is recognised and skipped, so daily runs only add what is new.
+- **New reviews**: each run asks the actor for up to 100 reviews per property (`APIFY_MAX_REVIEWS`). Anything already stored is recognised and skipped. The actor must be set to sort newest first; see Known limitations.
 - **Failures**: bounded retries with backoff on network errors; a fallback actor if the primary one cannot start; a failed, empty or mostly rejected run is recorded as `failed` or `degraded` and existing data is never deleted or overwritten; runs left `running` are picked up on the next collection; invalid rows are rejected with a reason and logged, without stopping the run.
 - **Fallback**: `npm run import` loads a CSV or JSON export through the same validation path.
 
@@ -156,7 +159,8 @@ Vercel only: static files from `public/`, one function (`api/index.js`) and a da
 - **Collection lag.** The cron starts runs one day and ingests them the next, so the dashboard is up to about a day behind Booking.com.
 - **AI tagging is not perfect.** Sarcasm, mixed sentences and very short reviews are hard. The evaluation tooling is built (`npm run label-template`, `npm run eval`), but the 100 hand labels have not been done yet, so precision and recall are not measured.
 - **Low volumes.** Each property gets only a handful of reviews a week, so weekly averages move a lot. The dashboard flags small samples instead of hiding them.
-- **Sample data.** `data/sample/reviews.json` must be refreshed from the database with `npm run export-sample`; it is not committed until real collected data is exported.
+- **Doubled low scores (fixed).** An early bug stored the 46 worst reviews as 8 to 10 out of 10. The code is fixed with a test and the stored rows were corrected; details in [docs/collection-method.md](docs/collection-method.md#incidents).
+- **Sample data is a snapshot.** `data/sample/reviews.json` is an export from 10 October 2026 and does not update by itself. Refresh it with `npm run export-sample` after collecting.
 
 ## Security and privacy
 
@@ -173,6 +177,8 @@ Vercel only: static files from `public/`, one function (`api/index.js`) and a da
 | [docs/collection-method.md](docs/collection-method.md) | Source, dedupe, incremental updates, failure handling, limits |
 | [docs/insights-methodology.md](docs/insights-methodology.md) | Topic tagging, validation, metrics, limits |
 | [docs/decisions.md](docs/decisions.md) | Decisions and their trade-offs |
+| [docs/known-unknowns.md](docs/known-unknowns.md) | What is not verified yet, and how to verify it |
+| [docs/operations.md](docs/operations.md) | Runbook: daily checks, commands, what to do when something breaks |
 | [docs/data-dictionary.md](docs/data-dictionary.md) | Tables and fields |
 | [docs/progress-log.md](docs/progress-log.md) | Timestamped progress updates |
 

@@ -47,3 +47,11 @@ The fallback returned a usable nested response with 75 reviews even though its i
 **Fix:** The scale now comes from the source: 10 for the primary actor, 5 for the fallback actor, `--scale` on imports (default 10). Regression test added.
 
 **Data correction:** On 2026-10-10 the 46 affected rows (all with Booking `selected_review_id` links, so all from the primary actor) were halved back to their real scores and marked `exact`. Reversible with `rating_10 * 2` on the same rows if ever needed. Their AI tags were unaffected because the prompt does not include the rating.
+
+## 2026-10-10: Warn staff about incomplete data on screen
+
+**Decision:** The Data health tab checks each property for stale data (newest review older than 21 days) and a suspiciously narrow score band (50+ reviews, fewer than 4 distinct scores, none of them 10). The Overview shows a plain warning when the selected property is affected.
+
+**Why:** Real data showed three properties with 100 reviews over years and only three adjacent scores. The dashboard computed perfectly reasonable-looking averages from them. Non-technical staff cannot spot that; the app has to say it.
+
+**Trade-off:** A quiet property can trip the staleness check. The message says "either the property had none, or collection is not fetching new ones" rather than blaming collection.
