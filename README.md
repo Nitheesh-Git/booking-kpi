@@ -22,9 +22,9 @@ npm test                    # unit tests, no network needed
 npm run dev                 # http://localhost:3000
 ```
 
-Without Supabase credentials the dashboard reads `data/sample/reviews.json`: 375 real reviews collected from the four Booking.com pages, with their AI topic tags, exported from the database on 10 October 2026. With credentials it reads the live database. To rebuild a database from the repository, apply `supabase/migrations/0001_init.sql` and run `npm run seed`.
+Without Supabase credentials the dashboard reads `data/sample/reviews.json`: 375 real reviews with their AI topic tags, exported from the database earlier on 10 October 2026, before the 12-month back-fill. It is a snapshot for running the app offline. With credentials it reads the live database (about 1,540 reviews). To rebuild a database from the repository, apply the files in `supabase/migrations/` in order and run `npm run seed`.
 
-> **Data status, read first.** The first collection did not fetch the newest reviews for Potts Point, Central Sydney and Darling Harbour (see Known limitations). Olympic Hotel Paddington's data is current. The dashboard says so on screen: the Data health tab flags each affected property, and the Overview warns that those numbers are incomplete.
+> **Data status.** On 10 October 2026 the first actor turned out to return a filtered, stale slice for three properties. It was replaced by a three-actor fallback chain, which back-filled 12 months for every property (newest reviews from this week, full 1 to 10 score range). AI topic tagging of the back-filled reviews was still finishing at submission; untagged reviews count towards ratings and trends and show "Topics not analysed yet".
 
 ### Collecting reviews
 
@@ -159,7 +159,7 @@ Vercel only: static files from `public/`, one function (`api/index.js`, region `
 ## Known limitations
 
 - **Third-party collector.** Collection depends on an Apify actor that can break when Booking.com changes its pages or blocks traffic. Drift shows up as `degraded` runs on the Data health tab; the CSV and JSON importer is the manual fallback. Automated collection may be restricted by Booking.com's terms; only public data is read, at low volume.
-- **The first actor did not return the newest reviews (VERIFIED; collector replaced, re-collection pending).** The stored data shows it: each property has about 100 reviews spread over up to three years, and the newest stored review at Potts Point is from 26 July 2026 and at Darling Harbour from 31 August 2026. So "this week" is close to empty for most properties until the actor is told to sort newest first. The sort option's exact input name has to be read from the actor's Apify page and set in `APIFY_INPUT_OVERRIDES`. Runs that return nothing from the last 21 days are now marked "Partial" on the Data health tab, so this can no longer go unnoticed.
+- **The first actor did not return the newest reviews (VERIFIED, FIXED 2026-10-10).** Each property had about 100 reviews spread over years with only a few mid-range scores and nothing recent. Booking.com itself showed thousands of current reviews, so the actor was at fault. It was replaced by a fallback chain (`lib/actors.js`): a property moves to the next actor on failure, empty output, reviews older than 21 days or a 1 to 5 scale. `omkar-cloud/booking-reviews-scraper` then back-filled 12 months. The Data health tab still checks freshness and score spread on every run, so a regression cannot go unnoticed.
 - **Collection lag.** The cron starts runs one day and ingests them the next, so the dashboard is up to about a day behind Booking.com.
 - **AI tagging is not perfect.** Sarcasm, mixed sentences and very short reviews are hard. The evaluation tooling is built (`npm run label-template`, `npm run eval`), but the 100 hand labels have not been done yet, so precision and recall are not measured.
 - **Low volumes.** Each property gets only a handful of reviews a week, so weekly averages move a lot. The dashboard flags small samples instead of hiding them.
