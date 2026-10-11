@@ -1,83 +1,49 @@
 /* Azzurro Review Insights. Design tokens first; every color is a role. */
 
+/* Light only: a calm, neutral palette where color marks meaning, not decoration. */
 :root {
   color-scheme: light;
-  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font: "Geist", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
-  --page: #f5f7fa;
+  --page: #f8f9fa;
   --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --surface-hover: #f1f5fb;
-  --border: #e3e8ef;
-  --border-strong: #cdd5df;
+  --surface-2: #f6f7f8;
+  --surface-hover: #f2f4f6;
+  --border: #e6e8eb;
+  --border-strong: #d3d7dc;
 
-  --ink: #0f1b2d;
-  --ink-2: #44526a;
-  --ink-3: #6b778c;
+  --ink: #1a1d23;
+  --ink-2: #4b515c;
+  --ink-3: #7c828d;
 
-  --brand: #1d5fd0;
-  --brand-hover: #174fb0;
-  --brand-soft: #e8f0fd;
+  --brand: #2e4a72;
+  --brand-hover: #243b5c;
+  --brand-soft: #eef1f6;
   --brand-ink: #ffffff;
 
-  --good: #1e8e5a;
-  --good-ink: #12704a;
-  --good-soft: #e6f4ed;
-  --warn: #b7791f;
-  --warn-ink: #8a5a12;
-  --warn-soft: #fdf3e1;
-  --bad: #d14343;
-  --bad-ink: #b42318;
-  --bad-soft: #fdecec;
+  --good: #3f7d63;
+  --good-ink: #2f6650;
+  --good-soft: #f1f6f3;
+  --warn: #a87a2f;
+  --warn-ink: #7f5c22;
+  --warn-soft: #faf6ee;
+  --bad: #b5524f;
+  --bad-ink: #9a3f3c;
+  --bad-soft: #faf2f1;
 
-  --series-positive: #1e8e5a;
-  --series-neutral: #a3adbd;
-  --series-negative: #d14343;
-  --series-line: #1d5fd0;
+  --series-positive: #6f9e88;
+  --series-neutral: #cfd3d9;
+  --series-negative: #c98a86;
+  --series-line: #2e4a72;
+  --series-bar: #8b95a5;
 
-  --grid: #edf0f4;
-  --axis: #cdd5df;
+  --grid: #f0f1f3;
+  --axis: #d3d7dc;
 
-  --radius: 10px;
+  --radius: 8px;
   --radius-sm: 6px;
-  --shadow: 0 1px 2px rgba(15, 27, 45, 0.05), 0 1px 3px rgba(15, 27, 45, 0.04);
-  --shadow-pop: 0 8px 24px rgba(15, 27, 45, 0.14);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --page: #0d121b;
-    --surface: #151b26;
-    --surface-2: #1a2230;
-    --surface-hover: #1f2939;
-    --border: #263042;
-    --border-strong: #34405a;
-    --ink: #eef2f8;
-    --ink-2: #b6c0d1;
-    --ink-3: #8592a8;
-    --brand: #5b8def;
-    --brand-hover: #7aa3f3;
-    --brand-soft: #1b2a47;
-    --brand-ink: #0d121b;
-    --good: #2fa36e;
-    --good-ink: #5cc795;
-    --good-soft: #13291f;
-    --warn: #d69a3b;
-    --warn-ink: #e6b366;
-    --warn-soft: #2d2313;
-    --bad: #e5605a;
-    --bad-ink: #f08a84;
-    --bad-soft: #301a1a;
-    --series-positive: #2fa36e;
-    --series-neutral: #5b6578;
-    --series-negative: #e5605a;
-    --series-line: #5b8def;
-    --grid: #1f2836;
-    --axis: #34405a;
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-pop: 0 8px 24px rgba(0, 0, 0, 0.5);
-  }
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-pop: 0 8px 24px rgba(16, 24, 40, 0.1);
 }
 
 * {
@@ -174,7 +140,7 @@ main {
   color: var(--brand-ink);
   display: grid;
   place-items: center;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 15px;
 }
 
@@ -546,12 +512,14 @@ main {
 
 .delta.good {
   color: var(--good-ink);
-  background: var(--good-soft);
+  background: transparent;
+  padding-left: 0;
 }
 
 .delta.bad {
   color: var(--bad-ink);
-  background: var(--bad-soft);
+  background: transparent;
+  padding-left: 0;
 }
 
 .delta.flat {
@@ -680,13 +648,13 @@ main {
 }
 
 .flag.critical {
-  border-color: color-mix(in srgb, var(--bad) 35%, var(--border));
-  background: var(--bad-soft);
+  background: var(--surface);
+  border-left: 3px solid var(--bad);
 }
 
 .flag.warning {
-  border-color: color-mix(in srgb, var(--warn) 35%, var(--border));
-  background: var(--warn-soft);
+  background: var(--surface);
+  border-left: 3px solid var(--warn);
 }
 
 .flag-icon {
@@ -937,7 +905,7 @@ tr.selected td {
 
 .topic-fill {
   height: 100%;
-  background: var(--series-negative);
+  background: var(--series-bar);
   border-radius: 0 4px 4px 0;
   min-width: 2px;
 }
@@ -1053,9 +1021,9 @@ tr.selected td {
   border-radius: 8px;
   display: grid;
   place-items: center;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 17px;
-  color: #fff;
+  color: var(--brand-ink);
 }
 
 .score.positive {
@@ -1063,7 +1031,7 @@ tr.selected td {
 }
 
 .score.neutral {
-  background: #6b778c;
+  background: var(--ink-3);
 }
 
 .score.negative {
@@ -1122,7 +1090,7 @@ tr.selected td {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 13px;
   line-height: 1;
 }
@@ -1267,10 +1235,16 @@ tr.selected td {
   align-items: flex-start;
   padding: 12px 16px;
   border-radius: var(--radius);
-  background: var(--warn-soft);
-  color: var(--warn-ink);
-  border: 1px solid color-mix(in srgb, var(--warn) 30%, var(--border));
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warn);
   font-size: 13px;
+}
+
+.banner > svg {
+  flex-shrink: 0;
+  color: var(--warn);
 }
 
 [hidden] {

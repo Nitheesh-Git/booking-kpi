@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Changed
+- Calmer light-only look: muted navy accent, softer status colors, warnings as white cards with a thin colored edge, grey complaint bars, Geist font. Dark mode removed so the dashboard always reads the same.
+
 ### Added
 - AI tagging clears any backlog on its own: after the cron's batch, each call tags for up to 4.5 minutes (function limit raised to 300 s) and hands on to `/api/enrich` up to three times, waiting out rate limits. No laptop step after a large collection.
 

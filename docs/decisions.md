@@ -36,7 +36,7 @@ The fallback returned a usable nested response with 75 reviews even though its i
 
 ## 2026-10-10: Dashboard redesign
 
-**Decision:** Replace the dark single-page layout with a light, card-based layout with tabs (Overview, Reviews, Data health), a sticky filter bar, dark mode from the operating system setting, and charts drawn as inline SVG instead of a chart library.
+**Decision:** Replace the dark single-page layout with a light, card-based layout with tabs (Overview, Reviews, Data health), a sticky filter bar, and charts drawn as inline SVG instead of a chart library.
 
 **Why:** The previous page did not show this week vs last week, a property breakdown, positive and negative trends or insight sentences, and it injected review text into the page without escaping. Inline SVG avoids a CDN dependency and gives full control over accessibility (text summaries, tooltips, colour never the only signal).
 
