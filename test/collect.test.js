@@ -259,12 +259,22 @@ describe("cross-actor duplicates", () => {
 });
 
 describe("double triggering", () => {
-  it("does not start a second run for a property started in the last 6 hours", async () => {
+  it("does not start a second run while one is in progress", async () => {
     const db = fakeDb();
     const api = fakeApi();
     await startCollection(db, env, "manual", { api });
     const again = await startCollection(db, env, "manual", { api });
     expect(again.every((r) => r.skipped)).toBe(true);
+    expect(api.started).toHaveLength(4);
+  });
+
+  it("still runs the daily cron a few hours after a manual run", async () => {
+    const db = fakeDb();
+    const api = fakeApi();
+    for (const id of ["olympic-paddington", "potts-point", "central-sydney", "darling-harbour"])
+      db.tables.scrape_runs.push({ id: `m-${id}`, property_id: id, status: "ingested", started_at: "2026-10-10T17:14:00Z" });
+    const run = await startCollection(db, env, "cron", { api, now: new Date("2026-10-10T19:00:00Z") });
+    expect(run.every((r) => !r.skipped)).toBe(true);
     expect(api.started).toHaveLength(4);
   });
 });

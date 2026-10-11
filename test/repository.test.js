@@ -41,6 +41,19 @@ describe("summarizeHealth", () => {
     expect(summarizeHealth({ reviews: fresh, enrichment: [], runs: [failedLastMonth], source: "test", now }).status).toBe("ok");
     expect(summarizeHealth({ reviews: fresh.slice(5), enrichment: [], runs: [], source: "test", now }).status).toBe("attention");
   });
+
+  it("does not count a failure the next actor recovered from", () => {
+    const fresh = ["olympic-paddington", "potts-point", "central-sydney", "darling-harbour"].flatMap((propertyId) =>
+      Array.from({ length: 5 }, (_, i) => ({ propertyId, reviewDate: day("2026-10-09"), rating: i + 5 })),
+    );
+    const failed = { property_id: "potts-point", status: "failed", finished_at: "2026-10-09T05:00:00Z" };
+    const rescued = { property_id: "potts-point", status: "ingested", finished_at: "2026-10-09T05:20:00Z" };
+    const health = summarizeHealth({ reviews: fresh, enrichment: [], runs: [rescued, failed], source: "test", now });
+    expect(health.status).toBe("ok");
+    expect(health.runs[1].recovered).toBe(true);
+    const other = { property_id: "central-sydney", status: "ingested", finished_at: "2026-10-09T05:20:00Z" };
+    expect(summarizeHealth({ reviews: fresh, enrichment: [], runs: [other, failed], source: "test", now }).status).toBe("attention");
+  });
 });
 
 describe("data sources", () => {

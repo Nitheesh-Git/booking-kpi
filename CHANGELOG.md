@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Changed
+- A manual run no longer blocks the daily cron: a property is skipped only while its run is in progress or within an hour of a finished one (was 6 hours, which skipped the 2026-10-10 cron).
+- Failed runs that the next actor recovered from are labelled as such and no longer mark data health as needing attention.
 - Calmer light-only look: muted navy accent, softer status colors, warnings as white cards with a thin colored edge, grey complaint bars, Geist font. Dark mode removed so the dashboard always reads the same.
 
 ### Added
