@@ -816,7 +816,7 @@ function renderHealth() {
         <td>${p.newestReview ? esc(fmtYear(sydneyDate(p.newestReview))) : '<span class="muted">none</span>'}</td>
         <td>${p.lastCollected ? esc(relativeTime(p.lastCollected)) : h.source === "sample" && h.exportedAt ? `<span class="muted">exported ${esc(fmtYear(sydneyDate(h.exportedAt)))}</span>` : '<span class="muted">unknown</span>'}</td>
         <td class="r num">${analysable ? fmtPct(e.done / analysable) : "–"}<div class="prop-sub">${e.done} of ${analysable}</div></td>
-        <td class="r num">${e.pending ? `<span class="badge">${e.pending} waiting</span>` : "0"}</td>
+        <td class="r num">${e.pending ? `<span class="badge" title="Reviews with text that the AI has not tagged with topics yet. Tagging runs with the daily collection.">${e.pending} to tag</span>` : "0"}</td>
         <td class="r num">${e.skipped}</td>
         <td>${p.issues?.length ? p.issues.map((i) => `<div class="flag-detail">⚠ ${esc(i)}</div>`).join("") : '<span class="pill ok"><span class="pill-dot"></span>OK</span>'}</td>
       </tr>`;
@@ -847,9 +847,9 @@ function renderHealth() {
   $("health").innerHTML = `
     <section class="card"><div class="card-body">${summary}</div></section>
     <section class="card">
-      <div class="card-head"><div><h2 class="card-title">By property</h2><p class="card-sub">"Analysed" means topics have been tagged. Reviews without text are rating only and are not analysed.</p></div></div>
+      <div class="card-head"><div><h2 class="card-title">By property</h2><p class="card-sub">"Analysed" means the AI has tagged the review with topics. "Awaiting AI tags" are reviews with text not tagged yet; tagging runs with the daily collection. Reviews without text are rating only and are not analysed.</p></div></div>
       <div class="card-body" style="padding:12px 0 0"><div class="table-wrap"><table>
-        <thead><tr><th>Property</th><th class="r">Reviews stored</th><th>Newest review</th><th>Last collected</th><th class="r">Analysed</th><th class="r">Waiting</th><th class="r">Rating only</th><th>Checks</th></tr></thead>
+        <thead><tr><th>Property</th><th class="r">Reviews stored</th><th>Newest review</th><th>Last collected</th><th class="r">Analysed</th><th class="r">Awaiting AI tags</th><th class="r">Rating only</th><th>Checks</th></tr></thead>
         <tbody>${rows}</tbody></table></div></div>
     </section>
     <section class="card">
